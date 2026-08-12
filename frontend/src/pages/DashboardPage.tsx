@@ -1,188 +1,403 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
-import { Store, User, LogOut, Activity, Database, CheckCircle2, ShieldCheck, Layers } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  DollarSign,
+  ShoppingBag,
+  TrendingUp,
+  Package,
+  AlertCircle,
+  Clock,
+  Sparkles,
+  UploadCloud,
+  CheckCircle2,
+  PieChart as PieIcon,
+  BarChart3
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  CartesianGrid
+} from 'recharts';
+import {
+  analyticsApi,
+  productsApi,
+  AnalyticsSummary,
+  SalesTrendPoint,
+  CategoryBreakdown,
+  TopProductItem,
+  DataQualityReport
+} from '../services/api';
+import { AnalyticsFilters } from '../components/AnalyticsFilters';
+import { DataQualityCard } from '../components/DataQualityCard';
 
-interface HealthInfo {
-  status: string;
-  database: string;
-  timestamp: string;
-}
+const CATEGORY_COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 
 export const DashboardPage: React.FC = () => {
-  const { user, logout } = useAuth();
-  const [health, setHealth] = useState<HealthInfo | null>(null);
-  const [isHealthLoading, setIsHealthLoading] = useState(true);
+  const navigate = useNavigate();
+  const [range, setRange] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [trend, setTrend] = useState<SalesTrendPoint[]>([]);
+  const [breakdown, setBreakdown] = useState<CategoryBreakdown[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProductItem[]>([]);
+  const [dataQuality, setDataQuality] = useState<DataQualityReport | null>(null);
+  
+  const [loading, setLoading] = useState<boolean>(true);
+  const [generating, setGenerating] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch unique categories
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await api.get('/health');
-        setHealth(response.data);
-      } catch (error) {
-        console.error('Health check failed', error);
-      } finally {
-        setIsHealthLoading(false);
-      }
-    };
-    checkHealth();
+    productsApi.listProducts({ limit: 1000 })
+      .then((res) => {
+        const uniqueCats = Array.from(new Set(res.data.map((p) => p.category).filter(Boolean))) as string[];
+        setCategories(uniqueCats);
+      })
+      .catch(() => {});
   }, []);
 
+  // Fetch analytics data on range or category change
+  useEffect(() => {
+    fetchDashboardData();
+  }, [range, selectedCategory]);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {
+        range,
+        category: selectedCategory || undefined
+      };
+
+      const [summaryRes, trendRes, breakdownRes, topRes, qualityRes] = await Promise.all([
+        analyticsApi.getSummary(params),
+        analyticsApi.getSalesTrend(params),
+        analyticsApi.getCategoryBreakdown({ range }),
+        analyticsApi.getTopProducts({ limit: 5, range }),
+        analyticsApi.getDataQuality({ range })
+      ]);
+
+      setSummary(summaryRes.data);
+      setTrend(trendRes.data);
+      setBreakdown(breakdownRes.data);
+      setTopProducts(topRes.data);
+      setDataQuality(qualityRes.data);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to load sales analytics.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateSynthetic = async () => {
+    setGenerating(true);
+    try {
+      await analyticsApi.getDataQuality(); // fallback test trigger or upload trigger
+      const res = await fetch('http://localhost:8000/api/v1/sales/generate-synthetic', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('retailmind_token')}`
+        }
+      });
+      if (res.ok) {
+        await fetchDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Header Navigation */}
-      <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-600/20 rounded-xl border border-indigo-500/30 text-indigo-400">
-              <Store className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="font-extrabold text-xl tracking-tight text-white flex items-center space-x-2">
-                <span>RetailMind</span>
-                <span className="gradient-text">AI</span>
-              </h1>
-              <p className="text-[10px] text-slate-400 font-medium -mt-1">Demand & Inventory Engine</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <div className="hidden sm:flex items-center space-x-3 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-              <span className="text-xs text-slate-300 font-medium">PostgreSQL Connected</span>
-            </div>
-
-            <button
-              onClick={logout}
-              className="flex items-center space-x-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
-            >
-              <LogOut className="w-4 h-4 text-rose-400" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Welcome Hero Banner */}
-        <div className="relative overflow-hidden glass-card rounded-3xl p-8 border border-slate-800/80 shadow-2xl">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-3">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Phase 1 Authentication & DB Foundation Ready</span>
-              </div>
-              <h2 className="text-3xl font-extrabold text-white tracking-tight">
-                Welcome back, <span className="gradient-text">{user?.full_name || user?.email}</span>!
-              </h2>
-              <p className="text-slate-400 text-sm mt-1 max-w-2xl">
-                Your RetailMind AI workspace is active. Database models for Users, Businesses, Products, Sales, Inventory, Festivals, Predictions, and Recommendations are deployed.
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-3 bg-slate-900/90 p-4 rounded-2xl border border-slate-800">
-              <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
-                <User className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-medium">Logged in as</p>
-                <p className="text-sm font-semibold text-white">{user?.email}</p>
-                <p className="text-[11px] text-indigo-400 font-medium capitalize">Role: {user?.role}</p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-6 pb-12">
+      
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Sales & Revenue Analytics
+          </h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">
+            Historical performance metrics, category breakdown, and data quality overview
+          </p>
         </div>
 
-        {/* Store & System Status Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Business Info Card */}
-          <div className="glass-card glass-card-hover rounded-2xl p-6 border border-slate-800">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
-                <Store className="w-6 h-6" />
-              </div>
-              <span className="text-xs px-2.5 py-1 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded-full font-medium">
-                Active Store
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-slate-400">Business Details</h3>
-            <p className="text-xl font-bold text-white mt-1">
-              {user?.business?.name || 'Standard Retail Store'}
-            </p>
-            <div className="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-              <span>Category:</span>
-              <span className="font-semibold text-slate-200">{user?.business?.type || 'General Store'}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/import')}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition-all shadow-sm"
+          >
+            <UploadCloud className="w-4 h-4 text-cyan-400" /> Upload CSV
+          </button>
+          <button
+            onClick={handleGenerateSynthetic}
+            disabled={generating}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4" /> {generating ? 'Generating...' : 'Seed 7,300 Dataset'}
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <AnalyticsFilters
+        range={range}
+        onRangeChange={setRange}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        categories={categories}
+      />
+
+      {error && (
+        <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 flex items-center gap-3 text-rose-400 text-xs">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Executive KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        
+        {/* Total Revenue */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400">Total Revenue</span>
+            <div className="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
+              <DollarSign className="w-4 h-4 text-cyan-400" />
             </div>
           </div>
+          <div className="text-xl font-bold text-slate-100 mt-3">
+            ₹{summary ? Number(summary.total_revenue).toLocaleString('en-IN') : '0'}
+          </div>
+          <span className="text-[10px] text-slate-500 mt-1 block">In selected date range</span>
+        </div>
 
-          {/* System Health Card */}
-          <div className="glass-card glass-card-hover rounded-2xl p-6 border border-slate-800">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
-                <Activity className="w-6 h-6" />
-              </div>
-              <span className="text-xs px-2.5 py-1 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded-full font-medium flex items-center space-x-1">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Healthy</span>
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-slate-400">FastAPI Backend Status</h3>
-            <p className="text-xl font-bold text-white mt-1">
-              {isHealthLoading ? 'Checking...' : health?.status === 'ok' ? 'Online & Ready' : 'Service Warning'}
-            </p>
-            <div className="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-              <span>Endpoint:</span>
-              <span className="font-mono text-xs text-emerald-400">GET /health</span>
+        {/* Observed Units Sold */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400">Observed Units Sold</span>
+            <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
+              <ShoppingBag className="w-4 h-4 text-blue-400" />
             </div>
           </div>
+          <div className="text-xl font-bold text-slate-100 mt-3">
+            {summary ? summary.observed_units_sold.toLocaleString('en-IN') : '0'} <span className="text-xs text-slate-400">pcs</span>
+          </div>
+          <span className="text-[10px] text-slate-500 mt-1 block">Historical aggregate</span>
+        </div>
 
-          {/* PostgreSQL DB Card */}
-          <div className="glass-card glass-card-hover rounded-2xl p-6 border border-slate-800">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400">
-                <Database className="w-6 h-6" />
+        {/* Average Revenue / Recorded Day */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400">Avg Revenue / Recorded Day</span>
+            <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
+          </div>
+          <div className="text-xl font-bold text-emerald-400 mt-3">
+            ₹{summary ? Number(summary.avg_revenue_per_recorded_day).toLocaleString('en-IN') : '0'}
+          </div>
+          <span className="text-[10px] text-slate-500 mt-1 block">Distinct sale dates only</span>
+        </div>
+
+        {/* Active Catalog Size */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400">Active Catalog</span>
+            <div className="p-2 bg-purple-500/10 rounded-xl border border-purple-500/20">
+              <Package className="w-4 h-4 text-purple-400" />
+            </div>
+          </div>
+          <div className="text-xl font-bold text-slate-100 mt-3">
+            {summary ? summary.active_catalog_size : 0} <span className="text-xs text-slate-400">items</span>
+          </div>
+          <span className="text-[10px] text-slate-500 mt-1 block">Active products</span>
+        </div>
+
+        {/* Confirmed Stockouts */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400">Confirmed Stockouts</span>
+            <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
+              <AlertCircle className="w-4 h-4 text-rose-400" />
+            </div>
+          </div>
+          <div className="text-xl font-bold text-rose-400 mt-3">
+            {summary ? summary.confirmed_stockout_days : 0} <span className="text-xs text-slate-400">days</span>
+          </div>
+          <span className="text-[10px] text-slate-500 mt-1 block">is_stockout = TRUE</span>
+        </div>
+
+        {/* Zero EOD Stock Days */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-400">Zero EOD Stock Days</span>
+            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20">
+              <Clock className="w-4 h-4 text-amber-400" />
+            </div>
+          </div>
+          <div className="text-xl font-bold text-amber-400 mt-3">
+            {summary ? summary.zero_eod_stock_days : 0} <span className="text-xs text-slate-400">days</span>
+          </div>
+          <span className="text-[10px] text-slate-500 mt-1 block">stock_available = 0</span>
+        </div>
+
+      </div>
+
+      {/* Data Quality Indicator Card */}
+      <DataQualityCard report={dataQuality} />
+
+      {/* Visualizations Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Sales Trend Area Chart */}
+        <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-cyan-400" />
+              <h3 className="text-sm font-bold text-slate-200">Revenue & Sales Trend</h3>
+            </div>
+            <span className="text-xs text-slate-400">Daily Trajectory</span>
+          </div>
+
+          <div className="h-72 w-full">
+            {trend.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                  <XAxis dataKey="sale_date" stroke="#64748b" tick={{ fontSize: 11 }} />
+                  <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                    formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Revenue']}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#06b6d4" strokeWidth={2.5} fillOpacity={1} fill="url(#revenueGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-500 text-xs">
+                No sales data found in selected range.
               </div>
-              <span className="text-xs px-2.5 py-1 bg-purple-500/10 text-purple-300 border border-purple-500/20 rounded-full font-medium">
-                Alembic Migrated
-              </span>
-            </div>
-            <h3 className="text-sm font-medium text-slate-400">Database Engine</h3>
-            <p className="text-xl font-bold text-white mt-1">PostgreSQL 18</p>
-            <div className="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-              <span>Connectivity:</span>
-              <span className="font-semibold text-purple-300 capitalize">{health?.database || 'Connected'}</span>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Phase 1 Models Status Section */}
-        <div className="glass-card rounded-2xl p-6 border border-slate-800">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center space-x-2">
-            <Layers className="w-5 h-5 text-indigo-400" />
-            <span>Phase 1 Deployed Database Schemas</span>
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { name: 'User', desc: 'Auth & roles' },
-              { name: 'Business', desc: 'Store profile' },
-              { name: 'Product', desc: 'SKU catalog' },
-              { name: 'Sales', desc: 'Transactions' },
-              { name: 'Inventory', desc: 'Stock levels' },
-              { name: 'Festival', desc: 'Demand uplift' },
-              { name: 'Prediction', desc: 'ML forecasts' },
-              { name: 'Recommendation', desc: 'Decision rules' },
-            ].map((model) => (
-              <div key={model.name} className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl">
-                <p className="text-sm font-bold text-indigo-300">{model.name}</p>
-                <p className="text-xs text-slate-400">{model.desc}</p>
+        {/* Category Breakdown Donut Chart */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <PieIcon className="w-5 h-5 text-blue-400" />
+              <h3 className="text-sm font-bold text-slate-200">Category Revenue Share</h3>
+            </div>
+
+            <div className="h-52 w-full flex items-center justify-center">
+              {breakdown.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={breakdown}
+                      dataKey="revenue"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={75}
+                      paddingAngle={4}
+                    >
+                      {breakdown.map((_, idx) => (
+                        <Cell key={`cell-${idx}`} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                      formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Revenue']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-slate-500 text-xs">No category data.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2 mt-2">
+            {breakdown.slice(0, 4).map((cat, idx) => (
+              <div key={cat.category} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }} />
+                  <span className="text-slate-300 font-medium">{cat.category}</span>
+                </div>
+                <span className="font-bold text-slate-200">{cat.percentage_share}%</span>
               </div>
             ))}
           </div>
         </div>
-      </main>
+
+      </div>
+
+      {/* Top 5 Performing Products Table */}
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-sm font-bold text-slate-200">Top 5 Performing Products</h3>
+          </div>
+          <button
+            onClick={() => navigate('/products')}
+            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            View All Products →
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/40">
+                <th className="py-3 px-4 font-semibold">SKU</th>
+                <th className="py-3 px-4 font-semibold">Product Name</th>
+                <th className="py-3 px-4 font-semibold">Category</th>
+                <th className="py-3 px-4 font-semibold">Observed Units Sold</th>
+                <th className="py-3 px-4 font-semibold text-right">Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {topProducts.map((p) => (
+                <tr key={p.product_id} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="py-3 px-4 font-mono font-semibold text-cyan-400">{p.sku}</td>
+                  <td className="py-3 px-4 font-medium text-slate-200">{p.name}</td>
+                  <td className="py-3 px-4 text-slate-400">{p.category || 'General'}</td>
+                  <td className="py-3 px-4 text-slate-300 font-semibold">{p.total_units_sold.toLocaleString()} pcs</td>
+                  <td className="py-3 px-4 font-bold text-right text-emerald-400">₹{Number(p.total_revenue).toLocaleString('en-IN')}</td>
+                </tr>
+              ))}
+              {topProducts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-6 text-center text-slate-500">No products found. Seed synthetic data or upload a CSV file.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 };

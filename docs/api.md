@@ -1,4 +1,4 @@
-# REST API Specification — RetailMind AI (Phase 1 & Phase 2)
+# REST API Specification — RetailMind AI (Phase 1, Phase 2 & Phase 3)
 
 Base URL: `http://localhost:8000`  
 API Version Prefix: `/api/v1`
@@ -10,21 +10,12 @@ API Version Prefix: `/api/v1`
 ### `GET /health`
 Verifies backend server status and PostgreSQL database connectivity.
 
-**Response `200 OK`**:
-```json
-{
-  "status": "ok",
-  "database": "connected",
-  "timestamp": "2026-08-12T21:40:00Z"
-}
-```
-
 ---
 
 ## 2. Authentication Flow
 
 ### `POST /api/v1/auth/register`
-Registers a new user and associated store business entity. Password is automatically hashed using `bcrypt`.
+Registers a new user and associated store business entity.
 
 ### `POST /api/v1/auth/login`
 Authenticates email and password, returning a JWT access token.
@@ -34,111 +25,71 @@ Protected endpoint retrieving profile of authenticated user. Requires `Authoriza
 
 ---
 
-## 3. Sales Data & Ingestion Endpoints (Phase 2)
+## 3. Product Catalog Management (Phase 3)
 
-### `POST /api/v1/sales/upload-csv`
-Protected endpoint for uploading a sales CSV file. Executes 2-phase atomic validation and database ingestion. If ANY validation error occurs, ZERO rows are written to PostgreSQL.
+All product endpoints strictly require authentication and enforce `Product.business_id == current_user.business_id`. Cross-tenant requests return `404 Not Found`.
 
-**Headers**:
-```
-Authorization: Bearer <access_token>
-Content-Type: multipart/form-data
-```
-
-**Form Body**: `file` (CSV file)
-
-**Response `200 OK` (Successful Atomic Import)**:
-```json
-{
-  "success": true,
-  "total_rows_processed": 7300,
-  "successful_imports": 7300,
-  "errors": [],
-  "message": "Successfully imported 7300 sales records into PostgreSQL database."
-}
-```
-
-**Response `200 OK` (Validation Rejection / Zero Rows Written)**:
-```json
-{
-  "success": false,
-  "total_rows_processed": 100,
-  "successful_imports": 0,
-  "errors": [
-    {
-      "row_number": 14,
-      "column": "selling_price",
-      "error": "Invalid monetary value '-25.00'. Selling price must be greater than 0.00."
-    },
-    {
-      "row_number": 42,
-      "column": "product_name",
-      "error": "SKU metadata conflict for 'SKU-GROC-001': existing product name 'Atta 5kg' vs CSV 'Atta 10kg'."
-    }
-  ],
-  "message": "Import failed with 2 validation errors. Zero rows were inserted into the database."
-}
-```
-
----
-
-### `POST /api/v1/sales/generate-synthetic`
-Generates a 7,300-record synthetic daily sales dataset (20 products x 365 days) and automatically ingests it into PostgreSQL for the current user's business.
-
-**Headers**:
-```
-Authorization: Bearer <access_token>
-```
-
-**Response `201 Created`**:
-```json
-{
-  "success": true,
-  "records_generated": 7300,
-  "imported_count": 7300,
-  "message": "Successfully generated and imported 7300 synthetic daily sales records."
-}
-```
-
----
-
-### `GET /api/v1/sales`
-Retrieves a paginated list of sales records for the authenticated user's store.
+### `GET /api/v1/products`
+Lists products for the authenticated business.
 
 **Query Parameters**:
-- `limit` (int, default 100): Page size limit (1–1000).
-- `offset` (int, default 0): Pagination offset.
-- `sku` (string, optional): Filter by product SKU.
+- `include_inactive` (bool, default `false`): Include soft-deactivated products.
+- `category` (string, optional): Filter by product category.
+- `search` (string, optional): Search by SKU code or product name.
+- `limit` (int, default 100), `offset` (int, default 0): Pagination.
 
-**Response `200 OK`**:
-```json
-[
-  {
-    "id": 1,
-    "business_id": 1,
-    "product_id": 1,
-    "quantity": 39,
-    "selling_price": "245.00",
-    "total_amount": "9555.00",
-    "promotion": false,
-    "holiday": false,
-    "festival": null,
-    "stock_available": 132,
-    "is_stockout": null,
-    "sale_date": "2025-01-01",
-    "created_at": "2026-08-12T21:40:00Z",
-    "product": {
-      "id": 1,
-      "business_id": 1,
-      "sku": "SKU-GROC-001",
-      "name": "Aashirvaad Whole Wheat Atta 5kg",
-      "category": "Atta & Flours",
-      "unit": "pcs",
-      "cost_price": "171.50",
-      "selling_price": "245.00",
-      "min_stock_level": 10,
-      "created_at": "2026-08-12T21:40:00Z"
-    }
-  }
-]
-```
+### `POST /api/v1/products`
+Manually creates a new product in the store catalog. Enforces unique composite constraint `(business_id, sku)`.
+
+### `GET /api/v1/products/{product_id}`
+Retrieves details for a single product.
+
+### `PUT /api/v1/products/{product_id}`
+Updates product attributes (`name`, `category`, `unit`, `cost_price`, `selling_price`, `min_stock_level`, `is_active`).
+
+### `DELETE /api/v1/products/{product_id}`
+Soft-deactivates the product (`is_active = False`). **Does NOT delete historical sales or product records.**
+
+---
+
+## 4. Sales Analytics & Data Quality Engine (Phase 3)
+
+All analytics endpoints require authentication and scope calculations strictly to `current_user.business_id`.
+
+### `GET /api/v1/analytics/summary`
+Returns executive KPI metrics:
+- `total_revenue`: Aggregate total sales revenue.
+- `observed_units_sold`: Aggregate historical sales volume.
+- `avg_revenue_per_recorded_day`: Revenue divided by count of distinct recorded sale dates.
+- `active_catalog_size`: Count of active products (`is_active = True`).
+- `confirmed_stockout_days`: Count of sales records where `is_stockout = TRUE`.
+- `zero_eod_stock_days`: Count of sales records where ending inventory `stock_available = 0`.
+
+**Query Parameters**:
+- `range` (string, default `"all"`): Preset range bounds (`7d`, `30d`, `90d`, `1y`, `all`).
+- `category` (string, optional): Filter by category.
+
+### `GET /api/v1/analytics/sales-trend`
+Returns daily time-series array of `sale_date`, `revenue`, `units_sold`, and `promo_active`.
+
+### `GET /api/v1/analytics/category-breakdown`
+Returns revenue distribution grouped by product category with percentage share.
+
+### `GET /api/v1/analytics/top-products`
+Returns top N products ranked by total sales revenue.
+
+### `GET /api/v1/analytics/product-performance/{product_id}`
+Returns time-series sales, stock level trajectory, and confirmed stockout flags for a single product.
+
+### `GET /api/v1/analytics/data-quality`
+Evaluates data completeness, date coverage continuity ratio, missing date gaps count, anomalies count, and operational stockout censoring ratio.
+
+---
+
+## 5. Sales Data Ingestion (Phase 2)
+
+### `POST /api/v1/sales/upload-csv`
+Uploads sales CSV file. Executes 2-phase atomic validation. Zero partial writes if any validation error occurs.
+
+### `POST /api/v1/sales/generate-synthetic`
+Generates and ingests a 7,300-record synthetic daily sales dataset.

@@ -4,6 +4,8 @@ from backend.app.core.config import settings
 from backend.app.api.health import router as health_router
 from backend.app.api.auth import router as auth_router
 from backend.app.api.sales import router as sales_router
+from backend.app.api.products import router as products_router
+from backend.app.api.analytics import router as analytics_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -33,6 +35,10 @@ app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth", tags=["Aut
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(sales_router, prefix=f"{settings.API_V1_STR}/sales", tags=["Sales"])
 app.include_router(sales_router, prefix="/sales", tags=["Sales"])
+app.include_router(products_router, prefix=f"{settings.API_V1_STR}/products", tags=["Products"])
+app.include_router(products_router, prefix="/products", tags=["Products"])
+app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics", tags=["Analytics"])
+app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 
 @app.get("/")
 def root():

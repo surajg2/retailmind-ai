@@ -10,9 +10,9 @@ from backend.app.services.csv_importer import validate_and_import_sales_csv
 from data.generate_synthetic_data import generate_dataset
 
 def create_test_user_and_business(client, db, email_prefix: str = "sales") -> Tuple[User, str]:
-    import random
-    rand_id = random.randint(1000, 9999)
-    email = f"{email_prefix}_{rand_id}_{date.today()}@example.com"
+    import uuid
+    rand_id = uuid.uuid4().hex[:8]
+    email = f"{email_prefix}_{rand_id}@example.com"
     pwd = "TestPassword123!"
     
     reg_resp = client.post("/api/v1/auth/register", json={

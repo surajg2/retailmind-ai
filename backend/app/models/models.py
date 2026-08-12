@@ -56,6 +56,7 @@ class Product(Base):
     cost_price = Column(Numeric(10, 2), nullable=False, default=0.00)
     selling_price = Column(Numeric(10, 2), nullable=False, default=0.00)
     min_stock_level = Column(Integer, default=10, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=utc_now)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 

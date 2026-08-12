@@ -53,7 +53,25 @@ class HealthCheck(BaseModel):
     database: str
     timestamp: datetime
 
-# Product & Sales Schemas
+# Product Schemas
+class ProductCreate(BaseModel):
+    sku: str = Field(..., min_length=1, max_length=100)
+    name: str = Field(..., min_length=1, max_length=255)
+    category: Optional[str] = "General"
+    unit: Optional[str] = "pcs"
+    cost_price: Decimal = Field(default=Decimal("0.00"), ge=0)
+    selling_price: Decimal = Field(default=Decimal("0.00"), ge=0)
+    min_stock_level: int = Field(default=10, ge=0)
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    unit: Optional[str] = None
+    cost_price: Optional[Decimal] = None
+    selling_price: Optional[Decimal] = None
+    min_stock_level: Optional[int] = None
+    is_active: Optional[bool] = None
+
 class ProductOut(BaseModel):
     id: int
     business_id: int
@@ -64,10 +82,12 @@ class ProductOut(BaseModel):
     cost_price: Decimal
     selling_price: Decimal
     min_stock_level: int
+    is_active: bool
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
+# Sales Schemas
 class SalesCreate(BaseModel):
     sku: str
     product_name: str
@@ -116,3 +136,51 @@ class SyntheticGenResult(BaseModel):
     records_generated: int
     imported_count: int
     message: str
+
+# Analytics & Dashboard Response Schemas
+class AnalyticsSummary(BaseModel):
+    total_revenue: Decimal
+    observed_units_sold: int
+    avg_revenue_per_recorded_day: Decimal
+    active_catalog_size: int
+    confirmed_stockout_days: int
+    zero_eod_stock_days: int
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+
+class SalesTrendPoint(BaseModel):
+    sale_date: date
+    revenue: Decimal
+    units_sold: int
+    promo_active: bool = False
+
+class CategoryBreakdown(BaseModel):
+    category: str
+    revenue: Decimal
+    units_sold: int
+    percentage_share: float
+
+class TopProductItem(BaseModel):
+    product_id: int
+    sku: str
+    name: str
+    category: Optional[str]
+    total_revenue: Decimal
+    total_units_sold: int
+
+class ProductPerformancePoint(BaseModel):
+    sale_date: date
+    units_sold: int
+    selling_price: Decimal
+    stock_available: int
+    is_stockout: Optional[bool] = None
+
+class DataQualityReport(BaseModel):
+    quality_score: float # 0.0 to 100.0
+    total_recorded_days: int
+    expected_days: int
+    date_coverage_ratio: float # 0.0 to 1.0
+    date_gaps_count: int
+    anomalies_count: int
+    stockout_censored_ratio: float # Operational business indicator
+    status: str # Excellent, Good, Warning, Poor
