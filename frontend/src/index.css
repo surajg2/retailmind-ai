@@ -3,41 +3,275 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #030712; /* Deep Charcoal / Slate 950 */
+    color: #f3f4f6;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
   }
 }
 
-.glass-card {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* ==========================================================================
+   RETAILMIND DISTINCTIVE MOTION SYSTEM
+   ========================================================================== */
+
+/* 1. Inventory Pulse (KPI Settlement Scan) */
+@keyframes inventoryPulseSettlement {
+  0% {
+    opacity: 0.3;
+    letter-spacing: 0.05em;
+    filter: blur(1px);
+  }
+  60% {
+    opacity: 0.9;
+    letter-spacing: normal;
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: normal;
+  }
 }
 
-.glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.animate-inventory-pulse {
+  animation: inventoryPulseSettlement 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.glass-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 12px 30px -10px rgba(79, 70, 229, 0.25);
+/* 2. Demand Flow (Chart Draw Left-to-Right) */
+@keyframes demandFlowDraw {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.4;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
 }
 
-.gradient-text {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.animate-demand-flow {
+  animation: demandFlowDraw 850ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-.gradient-bg-button {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  transition: all 0.2s ease-in-out;
+/* 3. Data Scanner (Single Pass Scan-Line across Data Quality Card) */
+@keyframes singleDataScan {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  70% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(200%);
+    opacity: 0;
+  }
 }
 
-.gradient-bg-button:hover {
-  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
-  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.4);
+.data-scan-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.data-scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent 0%, rgba(6, 182, 212, 0.25) 50%, transparent 100%);
+  animation: singleDataScan 1200ms ease-out 1 forwards;
+  pointer-events: none;
+}
+
+/* 4. Stockout Event (Localized Ripple Effect) */
+@keyframes stockoutRipple {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.stockout-dot-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stockout-ripple {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: rgba(244, 63, 94, 0.4);
+  animation: stockoutRipple 1800ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  pointer-events: none;
+}
+
+/* 5. Category Resolution (Center Outward Expansion) */
+@keyframes categoryResolve {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-category-resolve {
+  animation: categoryResolve 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 6. Product Materialization (Staggered Group Materialization) */
+@keyframes batchMaterialize {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.materialize-batch-1 {
+  animation: batchMaterialize 200ms cubic-bezier(0.16, 1, 0.3, 1) 0ms forwards;
+}
+.materialize-batch-2 {
+  animation: batchMaterialize 200ms cubic-bezier(0.16, 1, 0.3, 1) 70ms forwards;
+}
+.materialize-batch-3 {
+  animation: batchMaterialize 200ms cubic-bezier(0.16, 1, 0.3, 1) 140ms forwards;
+}
+.materialize-batch-4 {
+  animation: batchMaterialize 200ms cubic-bezier(0.16, 1, 0.3, 1) 210ms forwards;
+}
+
+/* 7. Navigation Rail & Accent Indicator */
+.nav-rail-item {
+  position: relative;
+  transition: color 200ms ease;
+}
+
+.nav-rail-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 8. Data-Wipe Page Transition */
+@keyframes dataWipeReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.8;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+.page-data-wipe {
+  animation: dataWipeReveal 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 9. Tactile Micro-Interactions (No Bouncing) */
+.tactile-card {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+.tactile-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px -4px rgba(6, 182, 212, 0.15);
+}
+
+.tactile-card:active {
+  transform: translateY(1px);
+}
+
+.tactile-button {
+  transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+
+.tactile-button:hover {
+  transform: translateY(-1px);
+}
+
+.tactile-button:active {
+  transform: translateY(1px);
+}
+
+/* 10. Empty State Data-Grid Pattern */
+.empty-data-grid {
+  background-size: 24px 24px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* 11. Data Acquisition Loading State */
+@keyframes dataAcquisitionSweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-acquisition {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.6) 0%,
+    rgba(51, 65, 85, 0.8) 50%,
+    rgba(30, 41, 59, 0.6) 100%
+  );
+  background-size: 200% 100%;
+  animation: dataAcquisitionSweep 1400ms linear infinite;
+}
+
+/* 12. Reduced Motion Fallbacks */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .page-data-wipe {
+    clip-path: none !important;
+    opacity: 1 !important;
+  }
+  .data-scan-line::after {
+    display: none !important;
+  }
+  .stockout-ripple {
+    display: none !important;
+  }
+  .skeleton-acquisition {
+    animation: none !important;
+    background: rgba(30, 41, 59, 0.8) !important;
+  }
 }

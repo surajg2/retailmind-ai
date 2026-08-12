@@ -75,7 +75,7 @@ export const CSVImportPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+    <div className="page-data-wipe max-w-3xl mx-auto space-y-6 pb-12">
       
       {/* Page Header */}
       <div>

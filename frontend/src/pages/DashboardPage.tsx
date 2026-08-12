@@ -11,7 +11,8 @@ import {
   UploadCloud,
   CheckCircle2,
   PieChart as PieIcon,
-  BarChart3
+  BarChart3,
+  Database
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -55,7 +56,6 @@ export const DashboardPage: React.FC = () => {
   const [generating, setGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch unique categories
   useEffect(() => {
     productsApi.listProducts({ limit: 1000 })
       .then((res) => {
@@ -65,7 +65,6 @@ export const DashboardPage: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  // Fetch analytics data on range or category change
   useEffect(() => {
     fetchDashboardData();
   }, [range, selectedCategory]);
@@ -102,7 +101,6 @@ export const DashboardPage: React.FC = () => {
   const handleGenerateSynthetic = async () => {
     setGenerating(true);
     try {
-      await analyticsApi.getDataQuality(); // fallback test trigger or upload trigger
       const res = await fetch('http://localhost:8000/api/v1/sales/generate-synthetic', {
         method: 'POST',
         headers: {
@@ -120,7 +118,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="page-data-wipe space-y-6 pb-12">
       
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -129,21 +127,21 @@ export const DashboardPage: React.FC = () => {
             Sales & Revenue Analytics
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">
-            Historical performance metrics, category breakdown, and data quality overview
+            Historical sales trajectory, category revenue breakdown, and data quality overview
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/import')}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition-all shadow-sm"
+            className="tactile-button flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold border border-slate-800 transition-all shadow-sm"
           >
             <UploadCloud className="w-4 h-4 text-cyan-400" /> Upload CSV
           </button>
           <button
             onClick={handleGenerateSynthetic}
             disabled={generating}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+            className="tactile-button flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" /> {generating ? 'Generating...' : 'Seed 7,300 Dataset'}
           </button>
@@ -166,89 +164,89 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* Executive KPI Cards */}
+      {/* Executive KPI Cards with Inventory Pulse Settlement */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         
         {/* Total Revenue */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="tactile-card bg-slate-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400">Total Revenue</span>
             <div className="p-2 bg-cyan-500/10 rounded-xl border border-cyan-500/20">
               <DollarSign className="w-4 h-4 text-cyan-400" />
             </div>
           </div>
-          <div className="text-xl font-bold text-slate-100 mt-3">
-            ₹{summary ? Number(summary.total_revenue).toLocaleString('en-IN') : '0'}
+          <div className={`text-xl font-bold text-slate-100 mt-3 font-mono ${loading ? 'skeleton-acquisition h-7 w-28 rounded-lg' : 'animate-inventory-pulse'}`}>
+            {!loading && summary && `₹${Number(summary.total_revenue).toLocaleString('en-IN')}`}
           </div>
           <span className="text-[10px] text-slate-500 mt-1 block">In selected date range</span>
         </div>
 
         {/* Observed Units Sold */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="tactile-card bg-slate-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400">Observed Units Sold</span>
             <div className="p-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
               <ShoppingBag className="w-4 h-4 text-blue-400" />
             </div>
           </div>
-          <div className="text-xl font-bold text-slate-100 mt-3">
-            {summary ? summary.observed_units_sold.toLocaleString('en-IN') : '0'} <span className="text-xs text-slate-400">pcs</span>
+          <div className={`text-xl font-bold text-slate-100 mt-3 font-mono ${loading ? 'skeleton-acquisition h-7 w-24 rounded-lg' : 'animate-inventory-pulse'}`}>
+            {!loading && summary && `${summary.observed_units_sold.toLocaleString('en-IN')} pcs`}
           </div>
           <span className="text-[10px] text-slate-500 mt-1 block">Historical aggregate</span>
         </div>
 
         {/* Average Revenue / Recorded Day */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="tactile-card bg-slate-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400">Avg Revenue / Recorded Day</span>
             <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
             </div>
           </div>
-          <div className="text-xl font-bold text-emerald-400 mt-3">
-            ₹{summary ? Number(summary.avg_revenue_per_recorded_day).toLocaleString('en-IN') : '0'}
+          <div className={`text-xl font-bold text-emerald-400 mt-3 font-mono ${loading ? 'skeleton-acquisition h-7 w-28 rounded-lg' : 'animate-inventory-pulse'}`}>
+            {!loading && summary && `₹${Number(summary.avg_revenue_per_recorded_day).toLocaleString('en-IN')}`}
           </div>
           <span className="text-[10px] text-slate-500 mt-1 block">Distinct sale dates only</span>
         </div>
 
         {/* Active Catalog Size */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="tactile-card bg-slate-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400">Active Catalog</span>
             <div className="p-2 bg-purple-500/10 rounded-xl border border-purple-500/20">
               <Package className="w-4 h-4 text-purple-400" />
             </div>
           </div>
-          <div className="text-xl font-bold text-slate-100 mt-3">
-            {summary ? summary.active_catalog_size : 0} <span className="text-xs text-slate-400">items</span>
+          <div className={`text-xl font-bold text-slate-100 mt-3 font-mono ${loading ? 'skeleton-acquisition h-7 w-20 rounded-lg' : 'animate-inventory-pulse'}`}>
+            {!loading && summary && `${summary.active_catalog_size} items`}
           </div>
           <span className="text-[10px] text-slate-500 mt-1 block">Active products</span>
         </div>
 
         {/* Confirmed Stockouts */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="tactile-card bg-slate-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400">Confirmed Stockouts</span>
             <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/20">
               <AlertCircle className="w-4 h-4 text-rose-400" />
             </div>
           </div>
-          <div className="text-xl font-bold text-rose-400 mt-3">
-            {summary ? summary.confirmed_stockout_days : 0} <span className="text-xs text-slate-400">days</span>
+          <div className={`text-xl font-bold text-rose-400 mt-3 font-mono ${loading ? 'skeleton-acquisition h-7 w-20 rounded-lg' : 'animate-inventory-pulse'}`}>
+            {!loading && summary && `${summary.confirmed_stockout_days} days`}
           </div>
           <span className="text-[10px] text-slate-500 mt-1 block">is_stockout = TRUE</span>
         </div>
 
         {/* Zero EOD Stock Days */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+        <div className="tactile-card bg-slate-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-400">Zero EOD Stock Days</span>
             <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/20">
               <Clock className="w-4 h-4 text-amber-400" />
             </div>
           </div>
-          <div className="text-xl font-bold text-amber-400 mt-3">
-            {summary ? summary.zero_eod_stock_days : 0} <span className="text-xs text-slate-400">days</span>
+          <div className={`text-xl font-bold text-amber-400 mt-3 font-mono ${loading ? 'skeleton-acquisition h-7 w-20 rounded-lg' : 'animate-inventory-pulse'}`}>
+            {!loading && summary && `${summary.zero_eod_stock_days} days`}
           </div>
           <span className="text-[10px] text-slate-500 mt-1 block">stock_available = 0</span>
         </div>
@@ -261,53 +259,64 @@ export const DashboardPage: React.FC = () => {
       {/* Visualizations Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Sales Trend Area Chart */}
-        <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+        {/* Sales Trend Area Chart (Demand Flow Draw) */}
+        <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-cyan-400" />
-              <h3 className="text-sm font-bold text-slate-200">Revenue & Sales Trend</h3>
+              <h3 className="text-sm font-bold text-slate-200 tracking-wide">Revenue & Sales Trajectory</h3>
             </div>
-            <span className="text-xs text-slate-400">Daily Trajectory</span>
+            <span className="text-xs text-slate-400 font-mono">Demand Reconstruction Flow</span>
           </div>
 
-          <div className="h-72 w-full">
+          <div className="h-72 w-full animate-demand-flow">
             {trend.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
                       <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
                   <XAxis dataKey="sale_date" stroke="#64748b" tick={{ fontSize: 11 }} />
                   <YAxis stroke="#64748b" tick={{ fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
                     formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, 'Revenue']}
                   />
-                  <Area type="monotone" dataKey="revenue" stroke="#06b6d4" strokeWidth={2.5} fillOpacity={1} fill="url(#revenueGrad)" />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#06b6d4"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#revenueGrad)"
+                    isAnimationActive={true}
+                    animationDuration={850}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 text-xs">
-                No sales data found in selected range.
+              <div className="empty-data-grid h-full rounded-xl border border-slate-800/80 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                <Database className="w-8 h-8 text-cyan-400/40 mb-2" />
+                <span className="text-xs font-semibold text-slate-300">No data has been loaded yet</span>
+                <span className="text-[11px] text-slate-500 mt-1">Upload a sales CSV or seed the 7,300 synthetic dataset</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Category Breakdown Donut Chart */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col justify-between">
+        {/* Category Breakdown Donut Chart (Category Resolution) */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-4">
               <PieIcon className="w-5 h-5 text-blue-400" />
-              <h3 className="text-sm font-bold text-slate-200">Category Revenue Share</h3>
+              <h3 className="text-sm font-bold text-slate-200 tracking-wide">Category Revenue Share</h3>
             </div>
 
-            <div className="h-52 w-full flex items-center justify-center">
+            <div className="h-52 w-full flex items-center justify-center animate-category-resolve">
               {breakdown.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -317,9 +326,11 @@ export const DashboardPage: React.FC = () => {
                       nameKey="category"
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
-                      paddingAngle={4}
+                      innerRadius={52}
+                      outerRadius={78}
+                      paddingAngle={3}
+                      isAnimationActive={true}
+                      animationDuration={600}
                     >
                       {breakdown.map((_, idx) => (
                         <Cell key={`cell-${idx}`} fill={CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} />
@@ -332,7 +343,9 @@ export const DashboardPage: React.FC = () => {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="text-slate-500 text-xs">No category data.</div>
+                <div className="empty-data-grid w-full h-full rounded-xl border border-slate-800/80 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                  <span className="text-xs font-medium text-slate-500">No category breakdown</span>
+                </div>
               )}
             </div>
           </div>
@@ -344,7 +357,7 @@ export const DashboardPage: React.FC = () => {
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[idx % CATEGORY_COLORS.length] }} />
                   <span className="text-slate-300 font-medium">{cat.category}</span>
                 </div>
-                <span className="font-bold text-slate-200">{cat.percentage_share}%</span>
+                <span className="font-bold text-slate-200 font-mono">{cat.percentage_share}%</span>
               </div>
             ))}
           </div>
@@ -352,25 +365,25 @@ export const DashboardPage: React.FC = () => {
 
       </div>
 
-      {/* Top 5 Performing Products Table */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+      {/* Top 5 Performing Products Table (Group Materialization) */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-sm font-bold text-slate-200">Top 5 Performing Products</h3>
+            <h3 className="text-sm font-bold text-slate-200 tracking-wide">Top Performing Products</h3>
           </div>
           <button
             onClick={() => navigate('/products')}
-            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
+            className="tactile-button text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
           >
-            View All Products →
+            View All Catalog →
           </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/40">
+              <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/80">
                 <th className="py-3 px-4 font-semibold">SKU</th>
                 <th className="py-3 px-4 font-semibold">Product Name</th>
                 <th className="py-3 px-4 font-semibold">Category</th>
@@ -379,18 +392,26 @@ export const DashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {topProducts.map((p) => (
-                <tr key={p.product_id} className="hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-4 font-mono font-semibold text-cyan-400">{p.sku}</td>
-                  <td className="py-3 px-4 font-medium text-slate-200">{p.name}</td>
-                  <td className="py-3 px-4 text-slate-400">{p.category || 'General'}</td>
-                  <td className="py-3 px-4 text-slate-300 font-semibold">{p.total_units_sold.toLocaleString()} pcs</td>
-                  <td className="py-3 px-4 font-bold text-right text-emerald-400">₹{Number(p.total_revenue).toLocaleString('en-IN')}</td>
-                </tr>
-              ))}
-              {topProducts.length === 0 && (
+              {topProducts.map((p, idx) => {
+                const batchClass = idx < 2 ? 'materialize-batch-1' : (idx < 4 ? 'materialize-batch-2' : 'materialize-batch-3');
+                return (
+                  <tr key={p.product_id} className={`${batchClass} hover:bg-slate-800/40 transition-colors`}>
+                    <td className="py-3 px-4 font-mono font-semibold text-cyan-400">{p.sku}</td>
+                    <td className="py-3 px-4 font-medium text-slate-200">{p.name}</td>
+                    <td className="py-3 px-4 text-slate-400">{p.category || 'General'}</td>
+                    <td className="py-3 px-4 text-slate-300 font-semibold font-mono">{p.total_units_sold.toLocaleString()} pcs</td>
+                    <td className="py-3 px-4 font-bold text-right text-emerald-400 font-mono">₹{Number(p.total_revenue).toLocaleString('en-IN')}</td>
+                  </tr>
+                );
+              })}
+              {topProducts.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-slate-500">No products found. Seed synthetic data or upload a CSV file.</td>
+                  <td colSpan={5} className="py-8 text-center">
+                    <div className="empty-data-grid py-8 rounded-xl border border-slate-800/80 flex flex-col items-center justify-center text-slate-400">
+                      <Database className="w-6 h-6 text-cyan-400/40 mb-1.5" />
+                      <span className="text-xs font-semibold text-slate-300">No data has been loaded yet</span>
+                    </div>
+                  </td>
                 </tr>
               )}
             </tbody>
