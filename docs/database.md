@@ -22,7 +22,7 @@ Product (1) <------- (N) Recommendation
 
 ---
 
-## Phase 1 Table Schemas
+## Table Schemas (Phase 1 & Phase 2 Implemented)
 
 ### 1. `businesses`
 * `id` (INT, PK)
@@ -50,21 +50,28 @@ Product (1) <------- (N) Recommendation
 * `name` (VARCHAR(255), INDEX, NOT NULL)
 * `category` (VARCHAR(100), INDEX)
 * `unit` (VARCHAR(50), DEFAULT 'pcs')
-* `cost_price` (FLOAT, DEFAULT 0.0)
-* `selling_price` (FLOAT, DEFAULT 0.0)
+* `cost_price` (NUMERIC(10,2), DEFAULT 0.00, NOT NULL) — *Exact monetary type*
+* `selling_price` (NUMERIC(10,2), DEFAULT 0.00, NOT NULL) — *Exact monetary type*
 * `min_stock_level` (INT, DEFAULT 10)
 * `created_at` (TIMESTAMPTZ)
 * `updated_at` (TIMESTAMPTZ)
 * **Index**: Composite Unique Index (`business_id`, `sku`)
 
-### 4. `sales`
+### 4. `sales` (Phase 2 Daily Sales Table)
 * `id` (INT, PK)
 * `business_id` (INT, FK -> `businesses.id` ON DELETE CASCADE)
 * `product_id` (INT, FK -> `products.id` ON DELETE CASCADE)
-* `quantity` (INT, NOT NULL)
-* `total_amount` (FLOAT, NOT NULL)
-* `sale_date` (TIMESTAMPTZ, INDEX, NOT NULL)
+* `quantity` (INT, NOT NULL) — *units_sold on date*
+* `selling_price` (NUMERIC(10,2), NOT NULL) — *Exact monetary per-unit price*
+* `total_amount` (NUMERIC(10,2), NOT NULL) — *units_sold * selling_price*
+* `promotion` (BOOLEAN, DEFAULT FALSE) — *Promo active indicator*
+* `holiday` (BOOLEAN, DEFAULT FALSE) — *Public holiday indicator*
+* `festival` (VARCHAR(100), NULLABLE) — *Festival name or NULL*
+* `stock_available` (INT, DEFAULT 0) — *Observed end-of-day stock level*
+* `is_stockout` (BOOLEAN, NULLABLE, INDEX) — *Derived indicator for demand censoring*
+* `sale_date` (DATE, INDEX, NOT NULL) — *PostgreSQL DATE type for daily aggregation*
 * `created_at` (TIMESTAMPTZ)
+* **Index**: Composite Unique Index `idx_sales_business_product_date` (`business_id`, `product_id`, `sale_date`)
 
 ### 5. `inventory`
 * `id` (INT, PK)
@@ -104,13 +111,7 @@ Product (1) <------- (N) Recommendation
 
 ---
 
-## Migration Execution
+## Migration History
 
-To apply database migrations:
-```powershell
-python database/init_db.py
-```
-Or directly using Alembic CLI:
-```powershell
-alembic -c backend/alembic.ini upgrade head
-```
+1. `001_initial_schema.py`: Base tables creation.
+2. `002_sales_phase2_schema.py`: Sales table alteration (`Date` sale_date, `Numeric(10,2)` money fields, `is_stockout`, unique constraint on `business_id` + `product_id` + `sale_date`).

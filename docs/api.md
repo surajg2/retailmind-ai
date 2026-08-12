@@ -1,4 +1,4 @@
-# REST API Specification — RetailMind AI (Phase 1)
+# REST API Specification — RetailMind AI (Phase 1 & Phase 2)
 
 Base URL: `http://localhost:8000`  
 API Version Prefix: `/api/v1`
@@ -15,7 +15,7 @@ Verifies backend server status and PostgreSQL database connectivity.
 {
   "status": "ok",
   "database": "connected",
-  "timestamp": "2026-08-10T22:00:00Z"
+  "timestamp": "2026-08-12T21:40:00Z"
 }
 ```
 
@@ -26,88 +26,119 @@ Verifies backend server status and PostgreSQL database connectivity.
 ### `POST /api/v1/auth/register`
 Registers a new user and associated store business entity. Password is automatically hashed using `bcrypt`.
 
-**Request Body**:
-```json
-{
-  "email": "owner@store.com",
-  "password": "SecurePassword123!",
-  "full_name": "Suraj Gupta",
-  "business_name": "Suraj Kirana Store",
-  "business_type": "Kirana / General Store"
-}
-```
-
-**Response `201 Created`**:
-```json
-{
-  "id": 1,
-  "email": "owner@store.com",
-  "full_name": "Suraj Gupta",
-  "role": "owner",
-  "is_active": true,
-  "business_id": 1,
-  "business": {
-    "id": 1,
-    "name": "Suraj Kirana Store",
-    "type": "Kirana / General Store",
-    "location": null,
-    "created_at": "2026-08-10T22:00:00Z"
-  },
-  "created_at": "2026-08-10T22:00:00Z"
-}
-```
-
----
-
 ### `POST /api/v1/auth/login`
 Authenticates email and password, returning a JWT access token.
 
-**Request Body**:
+### `GET /api/v1/auth/me`
+Protected endpoint retrieving profile of authenticated user. Requires `Authorization: Bearer <access_token>`.
+
+---
+
+## 3. Sales Data & Ingestion Endpoints (Phase 2)
+
+### `POST /api/v1/sales/upload-csv`
+Protected endpoint for uploading a sales CSV file. Executes 2-phase atomic validation and database ingestion. If ANY validation error occurs, ZERO rows are written to PostgreSQL.
+
+**Headers**:
+```
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+```
+
+**Form Body**: `file` (CSV file)
+
+**Response `200 OK` (Successful Atomic Import)**:
 ```json
 {
-  "email": "owner@store.com",
-  "password": "SecurePassword123!"
+  "success": true,
+  "total_rows_processed": 7300,
+  "successful_imports": 7300,
+  "errors": [],
+  "message": "Successfully imported 7300 sales records into PostgreSQL database."
 }
 ```
 
-**Response `200 OK`**:
+**Response `200 OK` (Validation Rejection / Zero Rows Written)**:
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer"
+  "success": false,
+  "total_rows_processed": 100,
+  "successful_imports": 0,
+  "errors": [
+    {
+      "row_number": 14,
+      "column": "selling_price",
+      "error": "Invalid monetary value '-25.00'. Selling price must be greater than 0.00."
+    },
+    {
+      "row_number": 42,
+      "column": "product_name",
+      "error": "SKU metadata conflict for 'SKU-GROC-001': existing product name 'Atta 5kg' vs CSV 'Atta 10kg'."
+    }
+  ],
+  "message": "Import failed with 2 validation errors. Zero rows were inserted into the database."
 }
 ```
 
 ---
 
-### `GET /api/v1/auth/me`
-Protected endpoint retrieving profile of authenticated user.
+### `POST /api/v1/sales/generate-synthetic`
+Generates a 7,300-record synthetic daily sales dataset (20 products x 365 days) and automatically ingests it into PostgreSQL for the current user's business.
 
 **Headers**:
 ```
 Authorization: Bearer <access_token>
 ```
 
-**Response `200 OK`**:
+**Response `201 Created`**:
 ```json
 {
-  "id": 1,
-  "email": "owner@store.com",
-  "full_name": "Suraj Gupta",
-  "role": "owner",
-  "is_active": true,
-  "business_id": 1,
-  "business": {
-    "id": 1,
-    "name": "Suraj Kirana Store",
-    "type": "Kirana / General Store"
-  }
+  "success": true,
+  "records_generated": 7300,
+  "imported_count": 7300,
+  "message": "Successfully generated and imported 7300 synthetic daily sales records."
 }
 ```
 
-**Error Response `401 Unauthorized`**:
+---
+
+### `GET /api/v1/sales`
+Retrieves a paginated list of sales records for the authenticated user's store.
+
+**Query Parameters**:
+- `limit` (int, default 100): Page size limit (1–1000).
+- `offset` (int, default 0): Pagination offset.
+- `sku` (string, optional): Filter by product SKU.
+
+**Response `200 OK`**:
 ```json
-{
-  "detail": "Could not validate credentials"
-}
+[
+  {
+    "id": 1,
+    "business_id": 1,
+    "product_id": 1,
+    "quantity": 39,
+    "selling_price": "245.00",
+    "total_amount": "9555.00",
+    "promotion": false,
+    "holiday": false,
+    "festival": null,
+    "stock_available": 132,
+    "is_stockout": null,
+    "sale_date": "2025-01-01",
+    "created_at": "2026-08-12T21:40:00Z",
+    "product": {
+      "id": 1,
+      "business_id": 1,
+      "sku": "SKU-GROC-001",
+      "name": "Aashirvaad Whole Wheat Atta 5kg",
+      "category": "Atta & Flours",
+      "unit": "pcs",
+      "cost_price": "171.50",
+      "selling_price": "245.00",
+      "min_stock_level": 10,
+      "created_at": "2026-08-12T21:40:00Z"
+    }
+  }
+]
 ```

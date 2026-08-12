@@ -6,13 +6,14 @@ RetailMind AI is a production-grade full-stack demand forecasting and inventory 
 
 ---
 
-## Technical Stack (Phase 1 Implemented)
+## Technical Stack (Phase 1 & Phase 2 Implemented)
 
 * **Frontend**: React 18, Vite, TypeScript, Tailwind CSS v4, Lucide Icons, Axios, React Router v6
-* **Backend**: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy ORM v2
+* **Backend**: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy ORM v2 (`Numeric(10,2)` money types, `Date` daily aggregations)
 * **Database**: PostgreSQL 18
 * **Database Migrations**: Alembic
 * **Authentication**: JWT (JSON Web Tokens), Bcrypt password hashing
+* **Data Engine**: 2-Phase Atomic CSV Validator & Ingestion Engine, Probabilistic Synthetic Sales Generator
 * **Testing**: Pytest & FastAPI TestClient
 
 ---
@@ -22,19 +23,20 @@ RetailMind AI is a production-grade full-stack demand forecasting and inventory 
 ```
 retailmind-ai/
 ├── backend/                  # FastAPI backend application & DB models
-│   ├── alembic/              # Database migration scripts
-│   ├── app/                  # Application code (API, Core, DB, Models, Schemas)
-│   ├── tests/                # Automated backend tests
+│   ├── alembic/              # Database migration scripts (001_initial_schema, 002_sales_phase2_schema)
+│   ├── app/                  # Application code (API, Core, DB, Models, Schemas, Services)
+│   ├── tests/                # Automated backend tests (test_auth.py, test_sales.py)
 │   └── requirements.txt      # Python dependencies
 ├── frontend/                 # React + TypeScript + Tailwind CSS application
 │   ├── src/                  # App, Components, Context, Pages, Services
-│   ├── index.html
 │   ├── package.json
 │   └── vite.config.ts
-├── database/                 # Database initialization / migration runner
+├── database/                 # Database migration runner
 │   └── init_db.py
-├── data/                     # Sample datasets (Phase 2)
-├── ml/                       # Machine Learning forecasting models (Phase 2)
+├── data/                     # Data generation & CSV storage
+│   ├── generate_synthetic_data.py
+│   └── synthetic_sales_data.csv  # 7,300 daily records (20 products x 365 days)
+├── ml/                       # Machine Learning forecasting models (Phase 3)
 ├── docs/                     # Comprehensive documentation
 │   ├── architecture.md
 │   ├── database.md
@@ -45,69 +47,48 @@ retailmind-ai/
 
 ---
 
+## Sales Data & CSV Ingestion (Phase 2)
+
+### CSV Format Specification
+```csv
+# RETAILMIND AI - SYNTHETIC DATASET
+date,sku,product_name,category,units_sold,selling_price,promotion,holiday,festival,stock_available
+2025-01-01,SKU-GROC-001,Aashirvaad Whole Wheat Atta 5kg,Atta & Flours,39,245.00,0,0,,132
+```
+
+- **Comment Headers**: CSV parser strips `#` comment headers automatically.
+- **Normalization**: `sku` maps to `Product` lookup/creation. `product_name` and `category` are not duplicated in the `sales` table. Empty festival entries normalize to PostgreSQL `NULL`.
+- **Atomic Two-Phase Validation**: If any row contains an error (such as an invalid date, negative quantity, invalid monetary value, intra-file duplicate, database duplicate, or SKU metadata conflict), **zero rows** are inserted.
+
+### Generating Synthetic Data
+To generate the 7,300-record probabilistic synthetic sales dataset:
+```powershell
+python data/generate_synthetic_data.py
+```
+
+---
+
 ## Local Setup Instructions
 
-### 1. Prerequisites
-- Python 3.10+
-- Node.js 18+ and npm
-- PostgreSQL 14+ running locally on port 5432
-
-### 2. Environment Configuration
-Copy `.env.example` to `.env` and configure your PostgreSQL database connection string:
-
-```powershell
-# In project root directory
-Copy-Item .env.example .env
-```
-
-Edit `.env`:
+### 1. Environment Configuration
+Ensure `.env` contains your PostgreSQL connection string:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/retailmind_db
-JWT_SECRET_KEY=your_secure_jwt_secret_key_here
 ```
 
-### 3. PostgreSQL Database Initialization
+### 2. Database Migrations
 Run Alembic schema migrations:
-
 ```powershell
 python database/init_db.py
 ```
 
-### 4. Backend Startup
-Install Python dependencies and start the Uvicorn server:
-
+### 3. Backend Startup
 ```powershell
-pip install -r backend/requirements.txt
 $env:PYTHONPATH="."
 uvicorn backend.app.main:app --reload --port 8000
 ```
-- API Documentation (Swagger UI): `http://localhost:8000/docs`
-- Health Check: `http://localhost:8000/health`
 
-### 5. Frontend Startup
-Install Node modules and start Vite development server:
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-- Local Application UI: `http://localhost:5173`
-
----
-
-## Authentication API Overview
-
-1. **Register User & Store**: `POST /api/v1/auth/register` (Hashes password with bcrypt, stores user & business in PostgreSQL)
-2. **User Login**: `POST /api/v1/auth/login` (Verifies password hash, returns JWT bearer access token)
-3. **Current Profile**: `GET /api/v1/auth/me` (Protected route requiring `Authorization: Bearer <token>`)
-
----
-
-## Verification & Automated Tests
-
-To run the backend test suite:
-
+### 4. Running Backend Test Suite
 ```powershell
 $env:PYTHONPATH="."
 pytest backend/tests -v

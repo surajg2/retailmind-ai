@@ -6,6 +6,12 @@ from backend.app.schemas.schemas import (
     UserOut,
     BusinessOut,
     HealthCheck,
+    ProductOut,
+    SalesCreate,
+    SalesOut,
+    CSVRowError,
+    CSVImportResult,
+    SyntheticGenResult,
 )
 
 __all__ = [
@@ -16,4 +22,10 @@ __all__ = [
     "UserOut",
     "BusinessOut",
     "HealthCheck",
+    "ProductOut",
+    "SalesCreate",
+    "SalesOut",
+    "CSVRowError",
+    "CSVImportResult",
+    "SyntheticGenResult",
 ]

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Index, Text
+    Column, Integer, String, Float, Numeric, Date, DateTime, ForeignKey, Boolean, Index, Text
 )
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base
@@ -53,8 +53,8 @@ class Product(Base):
     name = Column(String(255), nullable=False, index=True)
     category = Column(String(100), nullable=True, index=True)
     unit = Column(String(50), default="pcs") # e.g., kg, pcs, packet
-    cost_price = Column(Float, nullable=False, default=0.0)
-    selling_price = Column(Float, nullable=False, default=0.0)
+    cost_price = Column(Numeric(10, 2), nullable=False, default=0.00)
+    selling_price = Column(Numeric(10, 2), nullable=False, default=0.00)
     min_stock_level = Column(Integer, default=10, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
@@ -77,14 +77,24 @@ class Sales(Base):
     id = Column(Integer, primary_key=True, index=True)
     business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
-    quantity = Column(Integer, nullable=False)
-    total_amount = Column(Float, nullable=False)
-    sale_date = Column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+    quantity = Column(Integer, nullable=False) # units_sold
+    selling_price = Column(Numeric(10, 2), nullable=False, default=0.00)
+    total_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
+    promotion = Column(Boolean, nullable=False, default=False)
+    holiday = Column(Boolean, nullable=False, default=False)
+    festival = Column(String(100), nullable=True) # None when no festival
+    stock_available = Column(Integer, nullable=False, default=0)
+    is_stockout = Column(Boolean, nullable=True, index=True) # Nullable stockout indicator
+    sale_date = Column(Date, nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=utc_now)
 
     # Relationships
     business = relationship("Business", back_populates="sales")
     product = relationship("Product", back_populates="sales")
+
+    __table_args__ = (
+        Index("idx_sales_business_product_date", "business_id", "product_id", "sale_date", unique=True),
+    )
 
 
 class Inventory(Base):

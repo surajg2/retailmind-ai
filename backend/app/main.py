@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.config import settings
 from backend.app.api.health import router as health_router
 from backend.app.api.auth import router as auth_router
+from backend.app.api.sales import router as sales_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -30,6 +31,8 @@ app.include_router(health_router, tags=["Health"])
 app.include_router(health_router, prefix=settings.API_V1_STR, tags=["Health"])
 app.include_router(auth_router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(sales_router, prefix=f"{settings.API_V1_STR}/sales", tags=["Sales"])
+app.include_router(sales_router, prefix="/sales", tags=["Sales"])
 
 @app.get("/")
 def root():
