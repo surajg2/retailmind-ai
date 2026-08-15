@@ -1,0 +1,58 @@
+{
+  "model_name": "RetailMind_Demand_XGBoost",
+  "timestamp": "2026-08-15T17:45:08.064720+00:00",
+  "business_id": 93,
+  "business_name": "Test Store 65fc7c50",
+  "features": [
+    "day_of_week",
+    "day_of_month",
+    "month",
+    "week_of_year",
+    "is_weekend",
+    "lag_1",
+    "lag_7",
+    "lag_14",
+    "lag_28",
+    "rolling_mean_7",
+    "rolling_mean_14",
+    "rolling_mean_28",
+    "rolling_std_7",
+    "rolling_std_14",
+    "rolling_std_28",
+    "selling_price",
+    "promotion",
+    "holiday",
+    "has_festival",
+    "stock_available",
+    "is_stockout_feature",
+    "category_code",
+    "product_id_code"
+  ],
+  "target": "observed_units_sold",
+  "training_period": "2025-01-29 to 2025-09-20",
+  "validation_period": "2025-09-21 to 2025-11-09",
+  "test_period": "2025-11-10 to 2025-12-31",
+  "raw_record_count": 7300,
+  "train_rows": 4700,
+  "val_rows": 1000,
+  "test_rows": 1040,
+  "confirmed_stockout_count": 0,
+  "stockout_percentage": 0.0,
+  "test_metrics": {
+    "Naive": {
+      "MAE": 5.43,
+      "RMSE": 9.21
+    },
+    "Seasonal_Naive": {
+      "MAE": 4.77,
+      "RMSE": 8.77
+    },
+    "XGBoost": {
+      "MAE": 3.27,
+      "RMSE": 5.06
+    }
+  },
+  "xgb_beats_baseline": true,
+  "preferred_model": "XGBoost Regressor",
+  "acceptance_status": "SUCCESS: XGBoost outperformed the baseline (MAE 3.27 vs Best Baseline MAE 4.77)."
+}

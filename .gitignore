@@ -60,3 +60,6 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# ML Model Artifact Binaries
+ml/artifacts/*.joblib
