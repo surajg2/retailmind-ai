@@ -28,28 +28,31 @@ def resolve_date_bounds(
 ) -> tuple[Optional[date], Optional[date]]:
     """
     Resolves date range bounds based on presets (7d, 30d, 90d, 1y, all) or custom inputs.
-    ALL preset dynamically calculates min(sale_date) to max(sale_date) for the business.
+    Preset ranges are dynamically anchored to max(sale_date) for the authenticated business.
     """
     if range_preset:
         preset = range_preset.lower()
-        if preset == "all":
-            min_max = db.query(
-                func.min(Sales.sale_date),
-                func.max(Sales.sale_date)
-            ).filter(Sales.business_id == business_id).first()
-            if min_max and min_max[0] and min_max[1]:
-                return min_max[0], min_max[1]
+        min_max = db.query(
+            func.min(Sales.sale_date),
+            func.max(Sales.sale_date)
+        ).filter(Sales.business_id == business_id).first()
+
+        min_date = min_max[0] if min_max else None
+        max_date = min_max[1] if min_max else None
+
+        if not max_date:
             return None, None
-        
-        today = date.today()
-        if preset == "7d":
-            return today - timedelta(days=7), today
+
+        if preset == "all":
+            return min_date, max_date
+        elif preset == "7d":
+            return max_date - timedelta(days=6), max_date
         elif preset == "30d":
-            return today - timedelta(days=30), today
+            return max_date - timedelta(days=29), max_date
         elif preset == "90d":
-            return today - timedelta(days=90), today
+            return max_date - timedelta(days=89), max_date
         elif preset == "1y":
-            return today - timedelta(days=365), today
+            return max_date - timedelta(days=364), max_date
 
     return start_date, end_date
 

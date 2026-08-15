@@ -18,9 +18,6 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   selectedCategory,
   onCategoryChange,
   categories,
-  startDate,
-  endDate,
-  onCustomDateChange
 }) => {
   const presets = [
     { id: '7d', label: '7 Days' },
@@ -31,21 +28,21 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   ];
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-lg backdrop-blur-sm">
+    <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-lg backdrop-blur-sm">
       
       {/* Preset Range Buttons */}
       <div className="flex items-center flex-wrap gap-1.5">
-        <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 mr-2">
-          <Calendar className="w-3.5 h-3.5 text-cyan-400" /> Range:
+        <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1 mr-2">
+          <Calendar className="w-3.5 h-3.5 text-zinc-300" /> Range:
         </span>
         {presets.map((preset) => (
           <button
             key={preset.id}
             onClick={() => onRangeChange(preset.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            className={`tactile-button px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               range === preset.id
-                ? 'bg-cyan-500 text-slate-950 font-semibold shadow-md shadow-cyan-500/20'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 hover:text-white'
+                ? 'bg-zinc-100 text-zinc-950 font-bold shadow-md'
+                : 'bg-zinc-950/80 text-zinc-300 hover:bg-zinc-800 hover:text-white border border-zinc-800'
             }`}
           >
             {preset.label}
@@ -55,13 +52,13 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
       {/* Category Dropdown */}
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-          <Filter className="w-3.5 h-3.5 text-cyan-400" /> Category:
+        <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1">
+          <Filter className="w-3.5 h-3.5 text-zinc-300" /> Category:
         </span>
         <select
           value={selectedCategory}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="bg-slate-800 text-slate-200 text-xs font-medium rounded-lg px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-cyan-500 transition-colors"
+          className="bg-zinc-950 text-zinc-200 text-xs font-medium rounded-lg px-3 py-1.5 border border-zinc-800 focus:outline-none focus:border-zinc-500 transition-colors"
         >
           <option value="">All Categories</option>
           {categories.map((cat) => (

@@ -82,23 +82,23 @@ export const CSVImportPage: React.FC = () => {
         <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
           Sales CSV Data Ingestion Engine
         </h1>
-        <p className="text-slate-400 text-xs sm:text-sm mt-1">
+        <p className="text-zinc-400 text-xs sm:text-sm mt-1">
           Atomic 2-Phase Validation: Upload daily sales CSVs with zero-partial-write guarantee
         </p>
       </div>
 
       {/* CSV Specification Guidance */}
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
-        <h3 className="text-sm font-semibold text-cyan-400 mb-2 flex items-center gap-2">
-          <FileText className="w-4 h-4" /> Required CSV Header Format
+      <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
+        <h3 className="text-sm font-semibold text-zinc-200 mb-2 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-zinc-300" /> Required CSV Header Format
         </h3>
-        <div className="bg-slate-950 p-3 rounded-xl font-mono text-[11px] text-slate-300 border border-slate-800 overflow-x-auto">
+        <div className="bg-zinc-950 p-3 rounded-xl font-mono text-[11px] text-zinc-300 border border-zinc-800 overflow-x-auto">
           date,sku,product_name,category,units_sold,selling_price,promotion,holiday,festival,stock_available
         </div>
-        <ul className="text-xs text-slate-400 mt-3 space-y-1 list-disc list-inside">
-          <li>Supports comment lines starting with <code className="text-cyan-400">#</code>.</li>
+        <ul className="text-xs text-zinc-400 mt-3 space-y-1 list-disc list-inside">
+          <li>Supports comment lines starting with <code className="text-zinc-200 font-bold">#</code>.</li>
           <li>If ANY validation error occurs on any row, <strong>ZERO rows are inserted</strong> into PostgreSQL.</li>
-          <li>Dates must follow <code className="text-cyan-400">YYYY-MM-DD</code> format.</li>
+          <li>Dates must follow <code className="text-zinc-200 font-bold">YYYY-MM-DD</code> format.</li>
         </ul>
       </div>
 
@@ -106,13 +106,13 @@ export const CSVImportPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Card 1: Custom CSV Upload */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
+        <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <UploadCloud className="w-5 h-5 text-cyan-400" />
+              <UploadCloud className="w-5 h-5 text-zinc-200" />
               <h3 className="text-base font-bold text-white">Upload Custom CSV</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-zinc-400 mb-4">
               Upload your store's sales records CSV for automated normalization and DB ingestion.
             </p>
 
@@ -121,13 +121,13 @@ export const CSVImportPage: React.FC = () => {
                 type="file"
                 accept=".csv"
                 onChange={handleFileChange}
-                className="w-full bg-slate-950 text-xs text-slate-300 border border-slate-800 rounded-xl p-2.5 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/10 file:text-cyan-400 hover:file:bg-cyan-500/20"
+                className="w-full bg-zinc-950 text-xs text-zinc-300 border border-zinc-800 rounded-xl p-2.5 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-200 hover:file:bg-zinc-700"
               />
 
               <button
                 type="submit"
                 disabled={!file || uploading}
-                className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+                className="tactile-button w-full py-2.5 bg-zinc-100 hover:bg-white text-zinc-950 font-bold rounded-xl text-xs transition-all shadow-md disabled:opacity-50"
               >
                 {uploading ? 'Validating & Importing...' : 'Validate & Import CSV'}
               </button>
@@ -136,20 +136,20 @@ export const CSVImportPage: React.FC = () => {
         </div>
 
         {/* Card 2: Generate 7,300 Synthetic Dataset */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
+        <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-purple-400" />
+              <Sparkles className="w-5 h-5 text-zinc-200" />
               <h3 className="text-base font-bold text-white">Seed 7,300 Synthetic Dataset</h3>
             </div>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-zinc-400 mb-4">
               Automatically generate and ingest a 7,300-record daily dataset (20 Kirana products $\times$ 365 days) featuring weekly seasonality, regional festival uplifts, and probabilistic stockouts.
             </p>
 
             <button
               onClick={handleGenerateSynthetic}
               disabled={generating}
-              className="w-full py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50"
+              className="tactile-button w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-bold border border-zinc-700 rounded-xl text-xs transition-all shadow-md disabled:opacity-50"
             >
               {generating ? 'Generating 7,300 Records...' : 'Generate 7,300 Synthetic Sales'}
             </button>
@@ -181,19 +181,19 @@ export const CSVImportPage: React.FC = () => {
                 {result.success ? 'Import Completed Successfully' : 'Import Rejected (Zero Rows Inserted)'}
               </h3>
             </div>
-            <span className="text-xs font-medium text-slate-300">
+            <span className="text-xs font-medium text-zinc-300">
               Processed: {result.total_rows_processed} rows | Imported: {result.successful_imports}
             </span>
           </div>
 
-          <p className="text-xs text-slate-300 mb-4">{result.message}</p>
+          <p className="text-xs text-zinc-300 mb-4">{result.message}</p>
 
           {/* Validation Errors List */}
           {result.errors.length > 0 && (
-            <div className="bg-slate-950/80 rounded-xl p-4 border border-rose-500/20 max-h-60 overflow-y-auto space-y-2">
+            <div className="bg-zinc-950/80 rounded-xl p-4 border border-rose-500/20 max-h-60 overflow-y-auto space-y-2">
               <h4 className="text-xs font-semibold text-rose-400 mb-2">Detailed Row Validation Errors:</h4>
               {result.errors.map((err: { row_number: number; error: string }, idx: number) => (
-                <div key={idx} className="text-[11px] text-slate-300 flex items-start gap-2 font-mono border-b border-slate-900 pb-1.5">
+                <div key={idx} className="text-[11px] text-zinc-300 flex items-start gap-2 font-mono border-b border-zinc-900 pb-1.5">
                   <span className="text-rose-400 font-bold">Row {err.row_number}:</span>
                   <span>{err.error}</span>
                 </div>
@@ -205,7 +205,7 @@ export const CSVImportPage: React.FC = () => {
             <div className="mt-4 text-right">
               <button
                 onClick={() => navigate('/')}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-md"
+                className="tactile-button inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-md"
               >
                 Go to Sales Analytics Dashboard <ArrowRight className="w-4 h-4" />
               </button>

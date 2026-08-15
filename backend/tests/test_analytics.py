@@ -156,3 +156,90 @@ def test_missing_date_quality_calculation_and_all_range(client, db):
     assert dq["date_coverage_ratio"] == 0.3 # 3 / 10 = 0.3
     # Score = 0.3 * 70 + (1 - 0) * 30 = 21 + 30 = 51.0
     assert dq["quality_score"] == 51.0
+
+
+def test_dynamic_relative_date_preset_anchoring(client, db):
+    # 1. Test Empty Database does not crash (returns None for date bounds, 0 for metrics)
+    user_empty, token_empty = create_user_helper(client, db, "empty_preset")
+    headers_empty = {"Authorization": f"Bearer {token_empty}"}
+
+    summary_empty = client.get("/api/v1/analytics/summary?range=7d", headers=headers_empty)
+    assert summary_empty.status_code == status.HTTP_200_OK
+    assert Decimal(summary_empty.json()["total_revenue"]) == Decimal("0.00")
+    assert summary_empty.json()["start_date"] is None
+    assert summary_empty.json()["end_date"] is None
+
+    # 2. Populate dataset with sale dates ending on 2026-08-14
+    user, token = create_user_helper(client, db, "date_preset_user")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Generate sales ending on 2026-08-14 (from 2026-05-07 to 2026-08-14 = 100 days)
+    # Plus an older record on 2025-08-15 (1 year boundary)
+    csv_rows = ["date,sku,product_name,category,units_sold,selling_price,promotion,holiday,festival,stock_available"]
+    csv_rows.append("2025-08-15,SKU-RANGE-01,Range Item,Grocery,10,10.00,0,0,,50")
+    
+    start_d = date(2026, 5, 7)
+    for i in range(100):
+        d_str = (start_d + timedelta(days=i)).isoformat()
+        csv_rows.append(f"{d_str},SKU-RANGE-01,Range Item,Grocery,5,10.00,0,0,,50")
+
+    csv_data = "\n".join(csv_rows)
+    val_res = validate_and_import_sales_csv(db, user.business_id, csv_data)
+    assert val_res.success is True
+
+    # MAX(sale_date) is 2026-08-14.
+    # 7d:  2026-08-08 to 2026-08-14 (7 days * 5 pcs * 10.00 = 350.00 revenue)
+    # 30d: 2026-07-16 to 2026-08-14 (30 days * 5 pcs * 10.00 = 1500.00 revenue)
+    # 90d: 2026-05-17 to 2026-08-14 (90 days * 5 pcs * 10.00 = 4500.00 revenue)
+    # 1y:  2025-08-15 to 2026-08-14 (100 days * 50 + 10 = 510 pcs -> 5100.00 revenue)
+    # ALL: 2025-08-15 to 2026-08-14
+
+    # Test 7D Preset
+    s_7d = client.get("/api/v1/analytics/summary?range=7d", headers=headers).json()
+    assert s_7d["start_date"] == "2026-08-08"
+    assert s_7d["end_date"] == "2026-08-14"
+    assert s_7d["observed_units_sold"] == 35 # 7 days * 5 pcs
+    assert s_7d["total_revenue"] == "350.00"
+
+    # Test 30D Preset
+    s_30d = client.get("/api/v1/analytics/summary?range=30d", headers=headers).json()
+    assert s_30d["start_date"] == "2026-07-16"
+    assert s_30d["end_date"] == "2026-08-14"
+    assert s_30d["observed_units_sold"] == 150 # 30 days * 5 pcs
+    assert s_30d["total_revenue"] == "1500.00"
+
+    # Test 90D Preset
+    s_90d = client.get("/api/v1/analytics/summary?range=90d", headers=headers).json()
+    assert s_90d["start_date"] == "2026-05-17"
+    assert s_90d["end_date"] == "2026-08-14"
+    assert s_90d["observed_units_sold"] == 450 # 90 days * 5 pcs
+    assert s_90d["total_revenue"] == "4500.00"
+
+    # Test 1Y Preset
+    s_1y = client.get("/api/v1/analytics/summary?range=1y", headers=headers).json()
+    assert s_1y["start_date"] == "2025-08-15"
+    assert s_1y["end_date"] == "2026-08-14"
+    assert s_1y["observed_units_sold"] == 510 # 100 days * 5 + 10 = 510 pcs
+    assert s_1y["total_revenue"] == "5100.00"
+
+    # Test ALL Preset
+    s_all = client.get("/api/v1/analytics/summary?range=all", headers=headers).json()
+    assert s_all["start_date"] == "2025-08-15"
+    assert s_all["end_date"] == "2026-08-14"
+    assert s_all["observed_units_sold"] == 510
+
+    # Verify that all 5 analytics endpoints receive consistent range bounds
+    t_7d = client.get("/api/v1/analytics/sales-trend?range=7d", headers=headers).json()
+    assert len(t_7d) == 7
+
+    cat_7d = client.get("/api/v1/analytics/category-breakdown?range=7d", headers=headers).json()
+    assert len(cat_7d) == 1
+    assert cat_7d[0]["units_sold"] == 35
+
+    top_7d = client.get("/api/v1/analytics/top-products?range=7d", headers=headers).json()
+    assert len(top_7d) == 1
+    assert top_7d[0]["total_units_sold"] == 35
+
+    dq_7d = client.get("/api/v1/analytics/data-quality?range=7d", headers=headers).json()
+    assert dq_7d["total_recorded_days"] == 7
+

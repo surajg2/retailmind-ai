@@ -132,42 +132,42 @@ export const ProductsPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Product Catalog Management
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-1">
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
             Manage catalog items, stock thresholds, pricing, and active status
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="tactile-button flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-cyan-500/20"
+          className="tactile-button flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl text-xs font-bold transition-all shadow-md"
         >
           <Plus className="w-4 h-4" /> Add New Product
         </button>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 backdrop-blur-sm">
+      <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 backdrop-blur-sm">
         
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by SKU or Product Name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-950 text-slate-200 text-xs rounded-lg pl-9 pr-4 py-2 border border-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full bg-zinc-950 text-zinc-200 text-xs rounded-lg pl-9 pr-4 py-2 border border-zinc-800 focus:outline-none focus:border-zinc-500 transition-colors"
           />
         </div>
 
         {/* Category & Inactive Toggle */}
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-300 cursor-pointer">
             <input
               type="checkbox"
               checked={includeInactive}
               onChange={(e) => setIncludeInactive(e.target.checked)}
-              className="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0"
+              className="rounded bg-zinc-950 border-zinc-700 text-zinc-300 focus:ring-0"
             />
             <span>Include Soft-Deactivated</span>
           </label>
@@ -183,11 +183,11 @@ export const ProductsPage: React.FC = () => {
       )}
 
       {/* Products Data Table with Group Materialization */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
+      <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/80">
+              <tr className="text-zinc-400 border-b border-zinc-800 bg-zinc-950/80">
                 <th className="py-3 px-4 font-semibold">SKU</th>
                 <th className="py-3 px-4 font-semibold">Product Name</th>
                 <th className="py-3 px-4 font-semibold">Category</th>
@@ -198,17 +198,17 @@ export const ProductsPage: React.FC = () => {
                 <th className="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-zinc-800/60">
               {products.map((p, idx) => {
                 const batchClass = idx < 3 ? 'materialize-batch-1' : (idx < 7 ? 'materialize-batch-2' : (idx < 12 ? 'materialize-batch-3' : 'materialize-batch-4'));
                 return (
-                  <tr key={p.id} className={`${batchClass} hover:bg-slate-800/40 transition-colors ${!p.is_active ? 'opacity-60 bg-slate-950/40' : ''}`}>
-                    <td className="py-3 px-4 font-mono font-semibold text-cyan-400">{p.sku}</td>
-                    <td className="py-3 px-4 font-medium text-slate-200">{p.name}</td>
-                    <td className="py-3 px-4 text-slate-400">{p.category || 'General'}</td>
+                  <tr key={p.id} className={`${batchClass} hover:bg-zinc-800/40 transition-colors ${!p.is_active ? 'opacity-60 bg-zinc-950/40' : ''}`}>
+                    <td className="py-3 px-4 font-mono font-semibold text-zinc-200">{p.sku}</td>
+                    <td className="py-3 px-4 font-medium text-zinc-200">{p.name}</td>
+                    <td className="py-3 px-4 text-zinc-400">{p.category || 'General'}</td>
                     <td className="py-3 px-4 font-semibold text-emerald-400 font-mono">₹{Number(p.selling_price).toFixed(2)}</td>
-                    <td className="py-3 px-4 text-slate-400 font-mono">₹{Number(p.cost_price).toFixed(2)}</td>
-                    <td className="py-3 px-4 text-slate-300 font-mono">{p.min_stock_level} {p.unit}</td>
+                    <td className="py-3 px-4 text-zinc-400 font-mono">₹{Number(p.cost_price).toFixed(2)}</td>
+                    <td className="py-3 px-4 text-zinc-300 font-mono">{p.min_stock_level} {p.unit}</td>
                     <td className="py-3 px-4">
                       {p.is_active ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -224,14 +224,14 @@ export const ProductsPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => navigate(`/products/${p.id}`)}
-                          className="tactile-button p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors"
+                          className="tactile-button p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors"
                           title="View Details"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setEditingProduct(p)}
-                          className="tactile-button p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                          className="tactile-button p-1.5 text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
                           title="Edit Product"
                         >
                           <Edit2 className="w-4 h-4" />
@@ -239,7 +239,7 @@ export const ProductsPage: React.FC = () => {
                         {p.is_active && (
                           <button
                             onClick={() => handleSoftDeactivate(p)}
-                            className="tactile-button p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                            className="tactile-button p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                             title="Soft Deactivate (Preserves Sales History)"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -253,9 +253,9 @@ export const ProductsPage: React.FC = () => {
               {products.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="py-8 text-center">
-                    <div className="empty-data-grid py-8 rounded-xl border border-slate-800/80 flex flex-col items-center justify-center text-slate-400">
-                      <Database className="w-6 h-6 text-cyan-400/40 mb-1.5" />
-                      <span className="text-xs font-semibold text-slate-300">No products found matching query</span>
+                    <div className="empty-data-grid py-8 rounded-xl border border-zinc-800/80 flex flex-col items-center justify-center text-zinc-400">
+                      <Database className="w-6 h-6 text-zinc-500 mb-1.5" />
+                      <span className="text-xs font-semibold text-zinc-300">No products found matching query</span>
                     </div>
                   </td>
                 </tr>
@@ -267,11 +267,11 @@ export const ProductsPage: React.FC = () => {
 
       {/* Create Product Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-zinc-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Add New Product</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-200">
+              <button onClick={() => setShowAddModal(false)} className="text-zinc-400 hover:text-zinc-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -284,69 +284,69 @@ export const ProductsPage: React.FC = () => {
 
             <form onSubmit={handleCreateProduct} className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1 block">SKU Code *</label>
+                <label className="text-xs font-semibold text-zinc-300 mb-1 block">SKU Code *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. SKU-GROC-099"
                   value={newSku}
                   onChange={(e) => setNewSku(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1 block">Product Name *</label>
+                <label className="text-xs font-semibold text-zinc-300 mb-1 block">Product Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Sunflower Oil 1L"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-1 block">Category</label>
+                  <label className="text-xs font-semibold text-zinc-300 mb-1 block">Category</label>
                   <input
                     type="text"
                     value={newCat}
                     onChange={(e) => setNewCat(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-1 block">Unit</label>
+                  <label className="text-xs font-semibold text-zinc-300 mb-1 block">Unit</label>
                   <input
                     type="text"
                     value={newUnit}
                     onChange={(e) => setNewUnit(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-1 block">Selling Price (₹)</label>
+                  <label className="text-xs font-semibold text-zinc-300 mb-1 block">Selling Price (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-1 block">Cost Price (₹)</label>
+                  <label className="text-xs font-semibold text-zinc-300 mb-1 block">Cost Price (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={newCost}
                     onChange={(e) => setNewCost(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                   />
                 </div>
               </div>
@@ -355,13 +355,13 @@ export const ProductsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="tactile-button px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700"
+                  className="tactile-button px-4 py-2 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-semibold hover:bg-zinc-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="tactile-button px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-cyan-500/20"
+                  className="tactile-button px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl text-xs font-bold shadow-md"
                 >
                   Create Product
                 </button>
@@ -373,44 +373,44 @@ export const ProductsPage: React.FC = () => {
 
       {/* Edit Product Modal */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-zinc-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Edit Product (SKU: {editingProduct.sku})</h3>
-              <button onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-slate-200">
+              <button onClick={() => setEditingProduct(null)} className="text-zinc-400 hover:text-zinc-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleUpdateProduct} className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-300 mb-1 block">Product Name</label>
+                <label className="text-xs font-semibold text-zinc-300 mb-1 block">Product Name</label>
                 <input
                   type="text"
                   value={editingProduct.name}
                   onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-1 block">Category</label>
+                  <label className="text-xs font-semibold text-zinc-300 mb-1 block">Category</label>
                   <input
                     type="text"
                     value={editingProduct.category || ''}
                     onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 mb-1 block">Selling Price (₹)</label>
+                  <label className="text-xs font-semibold text-zinc-300 mb-1 block">Selling Price (₹)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={editingProduct.selling_price}
                     onChange={(e) => setEditingProduct({ ...editingProduct, selling_price: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:border-zinc-500"
                   />
                 </div>
               </div>
@@ -419,13 +419,13 @@ export const ProductsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="tactile-button px-4 py-2 bg-slate-800 text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-700"
+                  className="tactile-button px-4 py-2 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-semibold hover:bg-zinc-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="tactile-button px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-cyan-500/20"
+                  className="tactile-button px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-950 rounded-xl text-xs font-bold shadow-md"
                 >
                   Save Changes
                 </button>
