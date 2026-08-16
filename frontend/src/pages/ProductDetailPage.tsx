@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -9,7 +9,10 @@ import {
   Clock,
   CheckCircle2,
   Calendar,
-  Activity
+  Activity,
+  Sparkles,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -24,9 +27,15 @@ import {
 import {
   productsApi,
   analyticsApi,
+  forecastsApi,
   ProductItem,
-  ProductPerformancePoint
+  ProductPerformancePoint,
+  ProductForecastResponse,
+  ForecastPoint
 } from '../services/api';
+import { ForecastChart } from '../components/ForecastChart';
+import { SingleProductForecastTable } from '../components/ForecastTable';
+import { ForecastSummaryCards } from '../components/ForecastSummaryCards';
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,13 +44,18 @@ export const ProductDetailPage: React.FC = () => {
 
   const [product, setProduct] = useState<ProductItem | null>(null);
   const [performance, setPerformance] = useState<ProductPerformancePoint[]>([]);
+  const [productForecast, setProductForecast] = useState<ProductForecastResponse | null>(null);
+  
   const [range, setRange] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
+  const [forecastLoading, setForecastLoading] = useState<boolean>(true);
+  const [generating, setGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!productId) return;
     fetchProductDetails();
+    fetchProductForecast();
   }, [productId, range]);
 
   const fetchProductDetails = async () => {
@@ -60,6 +74,46 @@ export const ProductDetailPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const fetchProductForecast = async () => {
+    setForecastLoading(true);
+    try {
+      const res = await forecastsApi.getProductForecast(productId);
+      setProductForecast(res.data);
+    } catch (err) {
+      console.log('No existing forecast for product or error:', err);
+      setProductForecast(null);
+    } finally {
+      setForecastLoading(false);
+    }
+  };
+
+  const handleGenerateProductForecast = async () => {
+    setGenerating(true);
+    try {
+      await forecastsApi.generateForecasts(productId);
+      await fetchProductForecast();
+    } catch (err: any) {
+      console.error('Failed to generate product forecast:', err);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Convert performance points to historical points format for ForecastChart
+  const historicalChartPoints = useMemo(() => {
+    return performance.map((p) => ({
+      sale_date: p.sale_date,
+      units_sold: p.units_sold
+    }));
+  }, [performance]);
+
+  // Compute historical daily average for summary cards
+  const historicalDailyAvg = useMemo(() => {
+    if (!performance || performance.length === 0) return 0;
+    const totalUnits = performance.reduce((acc, p) => acc + p.units_sold, 0);
+    return totalUnits / performance.length;
+  }, [performance]);
 
   if (loading) {
     return (
@@ -89,7 +143,7 @@ export const ProductDetailPage: React.FC = () => {
   const zeroStockDays = performance.filter((p) => p.stock_available === 0).length;
 
   return (
-    <div className="page-data-wipe space-y-6 pb-12">
+    <div className="page-data-wipe space-y-8 pb-12">
       
       {/* Back Button & Header */}
       <div>
@@ -139,10 +193,85 @@ export const ProductDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* ================================================================== */}
+      {/* 7-DAY DEMAND FORECAST SECTION */}
+      {/* ================================================================== */}
+      <div className="bg-[#121215] border border-purple-950/80 rounded-2xl p-6 shadow-2xl space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-purple-900/30 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-800/80 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-purple-400" />
+                Product AI Intelligence
+              </span>
+              <span className="text-xs text-zinc-500 font-mono">XGBoost v1.0</span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight mt-1">
+              7-DAY DEMAND FORECAST
+            </h2>
+            <p className="text-xs text-[#a1a1aa]">
+              Product-level predicted observed units sold for next 7 calendar days
+            </p>
+          </div>
+
+          <button
+            onClick={handleGenerateProductForecast}
+            disabled={generating}
+            className="tactile-button flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold transition-all shadow-md disabled:opacity-50"
+          >
+            {generating ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                Generate Product Forecast
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Product Forecast Summary Cards */}
+        {productForecast && productForecast.forecast.length > 0 && (
+          <ForecastSummaryCards
+            forecastPoints={productForecast.forecast}
+            historicalDailyAvg={historicalDailyAvg}
+          />
+        )}
+
+        {/* Product Forecast Chart */}
+        {!forecastLoading && productForecast ? (
+          <ForecastChart
+            historicalData={historicalChartPoints}
+            forecastData={productForecast.forecast}
+            modelName={productForecast.metadata.model_name}
+            modelVersion={productForecast.metadata.model_version}
+          />
+        ) : (
+          <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-8 text-center text-[#a1a1aa] empty-data-grid">
+            <Sparkles className="w-6 h-6 mx-auto mb-2 text-zinc-600" />
+            <p className="text-sm font-medium text-[#f4f4f5]">No 7-day forecast generated for this product</p>
+            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+              Click &quot;Generate Product Forecast&quot; to run XGBoost predictions using this product&apos;s historical sales features.
+            </p>
+          </div>
+        )}
+
+        {/* Product Forecast Table */}
+        {productForecast && productForecast.forecast.length > 0 && (
+          <SingleProductForecastTable
+            forecastPoints={productForecast.forecast}
+            modelName={`${productForecast.metadata.model_name} (${productForecast.metadata.model_version})`}
+          />
+        )}
+      </div>
+
       {/* Range Preset Selector */}
       <div className="flex items-center justify-between bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 backdrop-blur-sm">
         <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1">
-          <Calendar className="w-3.5 h-3.5 text-zinc-300" /> Performance Timeframe:
+          <Calendar className="w-3.5 h-3.5 text-zinc-300" /> Historical Performance Timeframe:
         </span>
         <div className="flex items-center gap-1.5">
           {['7d', '30d', '90d', '1y', 'all'].map((r) => (
@@ -169,7 +298,7 @@ export const ProductDetailPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">In selected timeframe</span>
         </div>
 
-        {/* Confirmed Stockouts with Stockout Event Localized Ripple */}
+        {/* Confirmed Stockouts */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Confirmed Stockout Days</span>

@@ -147,16 +147,97 @@ export const productsApi = {
     api.delete<{ success: boolean; product_id: number; is_active: boolean; message: string }>(`/api/v1/products/${id}`),
 };
 
+export interface ForecastPoint {
+  forecast_date: string;
+  predicted_units: number;
+  actual_units?: number | null;
+}
+
+export interface ForecastProductInfo {
+  id: number;
+  sku: string;
+  name: string;
+  category?: string | null;
+}
+
+export interface ForecastMetadata {
+  model_name: string;
+  model_version: string;
+  training_cutoff_date: string;
+  generated_at: string;
+  horizon_days: number;
+  disclaimer: string;
+  historical_stockout_ratio?: number | null;
+}
+
+export interface SkippedProductInfo {
+  product_id: number;
+  sku?: string | null;
+  name?: string | null;
+  reason: string;
+}
+
+export interface ForecastItem {
+  id: number;
+  business_id: number;
+  product_id: number;
+  forecast_date: string;
+  predicted_units: number;
+  model_name: string;
+  model_version: string;
+  training_cutoff_date: string;
+  horizon_days: number;
+  generated_at: string;
+  actual_units?: number | null;
+  product?: ForecastProductInfo | null;
+}
+
+export interface ForecastGenerationResponse {
+  business_id: number;
+  generated_count: number;
+  skipped_count: number;
+  skipped_products: SkippedProductInfo[];
+  metadata: ForecastMetadata;
+  forecasts: ForecastItem[];
+}
+
+export interface ForecastListResponse {
+  total_records: number;
+  metadata?: ForecastMetadata | null;
+  forecasts: ForecastItem[];
+}
+
+export interface ProductForecastResponse {
+  product: ForecastProductInfo;
+  metadata: ForecastMetadata;
+  forecast: ForecastPoint[];
+}
+
+export interface LatestForecastProductGroup {
+  product: ForecastProductInfo;
+  forecast: ForecastPoint[];
+}
+
+export interface LatestForecastResponse {
+  business_id: number;
+  generated_at: string;
+  model_version: string;
+  training_cutoff_date: string;
+  horizon_days: number;
+  total_products: number;
+  products: LatestForecastProductGroup[];
+}
+
 export const forecastsApi = {
   generateForecasts: (productId?: number) =>
-    api.post('/api/v1/forecasts/generate', { product_id: productId }),
+    api.post<ForecastGenerationResponse>('/api/v1/forecasts/generate', { product_id: productId }),
 
   getForecasts: (params?: { product_id?: number; start_date?: string; end_date?: string }) =>
-    api.get('/api/v1/forecasts', { params }),
+    api.get<ForecastListResponse>('/api/v1/forecasts', { params }),
 
   getProductForecast: (productId: number) =>
-    api.get(`/api/v1/forecasts/product/${productId}`),
+    api.get<ProductForecastResponse>(`/api/v1/forecasts/product/${productId}`),
 
   getLatestForecasts: () =>
-    api.get('/api/v1/forecasts/latest'),
+    api.get<LatestForecastResponse>('/api/v1/forecasts/latest'),
 };

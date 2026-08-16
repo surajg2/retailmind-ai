@@ -252,7 +252,27 @@
   animation: dataAcquisitionSweep 1400ms linear infinite;
 }
 
-/* 12. Reduced Motion Fallbacks */
+/* 13. Forecast Projection Sweep Animation */
+@keyframes forecastProjectionSweep {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.3;
+  }
+  60% {
+    clip-path: inset(0 0 0 0);
+    opacity: 0.8;
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+.animate-forecast-projection {
+  animation: forecastProjectionSweep 1000ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* 14. Reduced Motion Fallbacks */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;
@@ -273,5 +293,10 @@
   .skeleton-acquisition {
     animation: none !important;
     background: rgba(30, 41, 59, 0.8) !important;
+  }
+  .animate-forecast-projection {
+    animation: none !important;
+    clip-path: none !important;
+    opacity: 1 !important;
   }
 }
