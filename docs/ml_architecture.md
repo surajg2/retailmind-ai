@@ -88,3 +88,33 @@ XGBoost is evaluated on the held-out **TEST** period against Naive and Seasonal 
 - Models are saved locally in `ml/artifacts/xgboost_demand_model.joblib`.
 - Metadata JSON (`xgboost_demand_model_metadata.json`) records training timestamps, business scope, feature lists, chronological date ranges, test set metrics, baseline metrics, and stockout statistics.
 - **Security Constraint**: No passwords, database connection strings, JWT secrets, or API keys are written to model artifacts.
+
+---
+
+## 8. Forecast Persistence & API Architecture (Phase 4B)
+
+### PostgreSQL Forecast Schema (`predictions` Table)
+- **Primary Key**: `id` (Integer)
+- **Tenant Scope**: `business_id` (Integer, FK -> `businesses.id`)
+- **Product Reference**: `product_id` (Integer, FK -> `products.id`)
+- **Target Forecast Date**: `forecast_date` (Date, Index)
+- **Predicted Observed Units**: `predicted_units` (Numeric(10, 2))
+- **Model Telemetry**: `model_name` (String(50)), `model_version` (String(50)), `training_cutoff_date` (Date), `horizon_days` (Integer, default 7), `generated_at` (DateTime(timezone=True))
+- **Observed Actual Units**: `actual_units` (Numeric(10, 2), Nullable)
+- **Unique Constraint**: `idx_predictions_business_product_date_version` on `(business_id, product_id, forecast_date, model_version)`.
+
+### Option A Replacement Strategy
+When `POST /api/v1/forecasts/generate` is triggered:
+- Existing forecasts for the same `(business_id, product_id, forecast_date, model_version)` combination are automatically deleted before inserting newly generated predictions.
+- This ensures clean version control, zero duplicate active records, and full auditability.
+
+### Insufficient History Handling
+- Products with fewer than 28 distinct historical sales dates are skipped cleanly during forecast generation.
+- Skipped products are returned in the API payload under `skipped_products` with reason `"INSUFFICIENT_HISTORY"`.
+- Synthetic data fabrication is strictly prohibited.
+
+### API Surface
+1. `POST /api/v1/forecasts/generate`: Generate and persist 7-day demand forecasts.
+2. `GET /api/v1/forecasts`: Retrieve persisted demand forecasts with optional filters.
+3. `GET /api/v1/forecasts/product/{product_id}`: Retrieve 7-day forecast for a single product (returns 404 for cross-tenant product IDs).
+4. `GET /api/v1/forecasts/latest`: Retrieve deterministic latest forecast batch for the business.

@@ -184,3 +184,83 @@ class DataQualityReport(BaseModel):
     anomalies_count: int
     stockout_censored_ratio: float # Operational business indicator
     status: str # Excellent, Good, Warning, Poor
+
+
+# Phase 4B Forecast Schemas
+class ForecastGenerateRequest(BaseModel):
+    product_id: Optional[int] = None
+
+class ForecastPoint(BaseModel):
+    forecast_date: date
+    predicted_units: float
+    actual_units: Optional[float] = None
+
+class ForecastProductInfo(BaseModel):
+    id: int
+    sku: str
+    name: str
+    category: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ForecastMetadata(BaseModel):
+    model_name: str = "XGBoost"
+    model_version: str = "xgb-v1"
+    training_cutoff_date: date
+    generated_at: datetime
+    horizon_days: int = 7
+    disclaimer: str = "Forecasts estimate future observed units sold based on historical observations."
+    historical_stockout_ratio: Optional[float] = None
+
+class SkippedProductInfo(BaseModel):
+    product_id: int
+    sku: Optional[str] = None
+    name: Optional[str] = None
+    reason: str = "INSUFFICIENT_HISTORY"
+
+class ForecastItem(BaseModel):
+    id: int
+    business_id: int
+    product_id: int
+    forecast_date: date
+    predicted_units: float
+    model_name: str
+    model_version: str
+    training_cutoff_date: date
+    horizon_days: int
+    generated_at: datetime
+    actual_units: Optional[float] = None
+    product: Optional[ForecastProductInfo] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ForecastGenerationResponse(BaseModel):
+    business_id: int
+    generated_count: int
+    skipped_count: int
+    skipped_products: List[SkippedProductInfo] = []
+    metadata: ForecastMetadata
+    forecasts: List[ForecastItem] = []
+
+class ForecastListResponse(BaseModel):
+    total_records: int
+    metadata: Optional[ForecastMetadata] = None
+    forecasts: List[ForecastItem]
+
+class ProductForecastResponse(BaseModel):
+    product: ForecastProductInfo
+    metadata: ForecastMetadata
+    forecast: List[ForecastPoint]
+
+class LatestForecastProductGroup(BaseModel):
+    product: ForecastProductInfo
+    forecast: List[ForecastPoint]
+
+class LatestForecastResponse(BaseModel):
+    business_id: int
+    generated_at: datetime
+    model_version: str
+    training_cutoff_date: date
+    horizon_days: int
+    total_products: int
+    products: List[LatestForecastProductGroup]

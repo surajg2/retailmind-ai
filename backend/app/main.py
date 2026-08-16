@@ -6,6 +6,7 @@ from backend.app.api.auth import router as auth_router
 from backend.app.api.sales import router as sales_router
 from backend.app.api.products import router as products_router
 from backend.app.api.analytics import router as analytics_router
+from backend.app.api.forecasts import router as forecasts_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -39,6 +40,8 @@ app.include_router(products_router, prefix=f"{settings.API_V1_STR}/products", ta
 app.include_router(products_router, prefix="/products", tags=["Products"])
 app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics", tags=["Analytics"])
 app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
+app.include_router(forecasts_router, prefix=f"{settings.API_V1_STR}/forecasts", tags=["Forecasts"])
+app.include_router(forecasts_router, prefix="/forecasts", tags=["Forecasts"])
 
 @app.get("/")
 def root():

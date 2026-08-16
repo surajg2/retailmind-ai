@@ -91,14 +91,20 @@ Product (1) <------- (N) Recommendation
 * `expected_uplift` (FLOAT, DEFAULT 1.2)
 * `created_at` (TIMESTAMPTZ)
 
-### 7. `predictions`
+### 7. `predictions` (Phase 4B Forecast Persistence Table)
 * `id` (INT, PK)
-* `business_id` (INT, FK -> `businesses.id` ON DELETE CASCADE)
-* `product_id` (INT, FK -> `products.id` ON DELETE CASCADE)
-* `model_version` (VARCHAR(50), DEFAULT 'v1.0')
-* `predicted_demand` (FLOAT, NOT NULL)
-* `prediction_date` (TIMESTAMPTZ, INDEX, NOT NULL)
-* `created_at` (TIMESTAMPTZ)
+* `business_id` (INT, FK -> `businesses.id` ON DELETE CASCADE, INDEX, NOT NULL)
+* `product_id` (INT, FK -> `products.id` ON DELETE CASCADE, INDEX, NOT NULL)
+* `forecast_date` (DATE, INDEX, NOT NULL) — *Target calendar date being predicted*
+* `predicted_units` (NUMERIC(10,2), NOT NULL) — *Predicted observed units sold*
+* `model_name` (VARCHAR(50), NOT NULL, DEFAULT 'XGBoost') — *ML algorithm identifier*
+* `model_version` (VARCHAR(50), NOT NULL, DEFAULT 'xgb-v1') — *Model version identifier*
+* `training_cutoff_date` (DATE, NOT NULL) — *Latest historical sale date used in model input*
+* `horizon_days` (INT, NOT NULL, DEFAULT 7) — *Forecast horizon window (7 days)*
+* `generated_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW()) — *Timestamp when forecast was generated*
+* `actual_units` (NUMERIC(10,2), NULLABLE) — *Observed actual units once target date passes*
+* `created_at` (TIMESTAMPTZ, DEFAULT NOW())
+* **Unique Index**: Composite Unique Index `idx_predictions_business_product_date_version` (`business_id`, `product_id`, `forecast_date`, `model_version`)
 
 ### 8. `recommendations`
 * `id` (INT, PK)
@@ -115,3 +121,5 @@ Product (1) <------- (N) Recommendation
 
 1. `001_initial_schema.py`: Base tables creation.
 2. `002_sales_phase2_schema.py`: Sales table alteration (`Date` sale_date, `Numeric(10,2)` money fields, `is_stockout`, unique constraint on `business_id` + `product_id` + `sale_date`).
+3. `003_add_product_is_active.py`: Soft-delete product flag (`is_active` boolean, default True).
+4. `004_forecast_persistence.py`: Predictions table migration for Phase 4B forecast persistence (`forecast_date`, `predicted_units`, `model_name`, `model_version`, `training_cutoff_date`, `horizon_days`, `generated_at`, `actual_units`, unique index).

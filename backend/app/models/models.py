@@ -132,14 +132,30 @@ class Prediction(Base):
     id = Column(Integer, primary_key=True, index=True)
     business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
-    model_version = Column(String(50), nullable=False, default="v1.0")
-    predicted_demand = Column(Float, nullable=False)
-    prediction_date = Column(DateTime(timezone=True), nullable=False, index=True)
+    forecast_date = Column(Date, nullable=False, index=True)
+    predicted_units = Column(Numeric(10, 2), nullable=False)
+    model_name = Column(String(50), nullable=False, default="XGBoost")
+    model_version = Column(String(50), nullable=False, default="xgb-v1")
+    generated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    training_cutoff_date = Column(Date, nullable=False)
+    horizon_days = Column(Integer, nullable=False, default=7)
+    actual_units = Column(Numeric(10, 2), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now)
 
     # Relationships
     business = relationship("Business", back_populates="predictions")
     product = relationship("Product", back_populates="predictions")
+
+    __table_args__ = (
+        Index(
+            "idx_predictions_business_product_date_version",
+            "business_id",
+            "product_id",
+            "forecast_date",
+            "model_version",
+            unique=True
+        ),
+    )
 
 
 class Recommendation(Base):

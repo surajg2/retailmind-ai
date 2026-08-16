@@ -146,3 +146,17 @@ export const productsApi = {
   deactivateProduct: (id: number) =>
     api.delete<{ success: boolean; product_id: number; is_active: boolean; message: string }>(`/api/v1/products/${id}`),
 };
+
+export const forecastsApi = {
+  generateForecasts: (productId?: number) =>
+    api.post('/api/v1/forecasts/generate', { product_id: productId }),
+
+  getForecasts: (params?: { product_id?: number; start_date?: string; end_date?: string }) =>
+    api.get('/api/v1/forecasts', { params }),
+
+  getProductForecast: (productId: number) =>
+    api.get(`/api/v1/forecasts/product/${productId}`),
+
+  getLatestForecasts: () =>
+    api.get('/api/v1/forecasts/latest'),
+};

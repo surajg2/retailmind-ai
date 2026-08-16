@@ -93,3 +93,32 @@ Uploads sales CSV file. Executes 2-phase atomic validation. Zero partial writes 
 
 ### `POST /api/v1/sales/generate-synthetic`
 Generates and ingests a 7,300-record synthetic daily sales dataset.
+
+---
+
+## 6. Demand Forecasting Engine & Persistence (Phase 4B)
+
+All forecasting endpoints strictly require authentication and scope calculations to `current_user.business_id`. Cross-tenant requests return `404 Not Found`.
+
+### `POST /api/v1/forecasts/generate`
+Triggers demand forecast generation and persistence into PostgreSQL.
+- **Request Body**: `{ "product_id": Optional[int] }`
+- **Behavior**:
+  - Generates 7-day observed demand forecasts relative to `MAX(sale_date)`.
+  - Products with $< 28$ recorded sales dates are skipped cleanly and reported in `skipped_products` with reason `"INSUFFICIENT_HISTORY"`.
+  - Option A Replacement Strategy: Replaces existing forecast records matching `(business_id, product_id, forecast_date, model_version)`.
+- **Response**: `ForecastGenerationResponse` containing `generated_count`, `skipped_count`, `skipped_products`, `metadata` (model_name, model_version, training_cutoff_date, horizon_days, historical_stockout_ratio, disclaimer), and generated forecast records.
+
+### `GET /api/v1/forecasts`
+Retrieves persisted demand forecasts for the authenticated business.
+- **Query Parameters**: `product_id` (optional int), `start_date` (optional date), `end_date` (optional date).
+- **Default Range**: Next 7 forecast days relative to `MAX(forecast_date)`.
+- **Response**: `ForecastListResponse`.
+
+### `GET /api/v1/forecasts/product/{product_id}`
+Retrieves 7-day demand forecast for a single product.
+- **Response**: `ProductForecastResponse` containing `product` info, `metadata`, and 7-day `forecast` points array.
+
+### `GET /api/v1/forecasts/latest`
+Retrieves deterministic latest generated forecast set grouped by product for the business.
+- **Response**: `LatestForecastResponse`.
