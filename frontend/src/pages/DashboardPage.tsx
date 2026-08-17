@@ -17,7 +17,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Layers,
-  ArrowRight
+  Target,
+  AlertOctagon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -35,6 +36,8 @@ import {
   analyticsApi,
   productsApi,
   forecastsApi,
+  forecastEvaluationApi,
+  anomaliesApi,
   AnalyticsSummary,
   SalesTrendPoint,
   CategoryBreakdown,
@@ -43,7 +46,10 @@ import {
   LatestForecastResponse,
   SkippedProductInfo,
   ForecastPoint,
-  ForecastMetadata
+  ForecastMetadata,
+  ForecastEvaluationSummary,
+  ModelMonitoring,
+  AnomalyItem
 } from '../services/api';
 import { AnalyticsFilters } from '../components/AnalyticsFilters';
 import { DataQualityCard } from '../components/DataQualityCard';
@@ -51,6 +57,9 @@ import { ForecastChart } from '../components/ForecastChart';
 import { ForecastSummaryCards } from '../components/ForecastSummaryCards';
 import { ForecastMetadataPanel } from '../components/ForecastMetadata';
 import { GroupForecastTable } from '../components/ForecastTable';
+import { ForecastEvaluationCards } from '../components/ForecastEvaluationCards';
+import { ModelMonitoringCard } from '../components/ModelMonitoringCard';
+import { AnomaliesTable } from '../components/AnomaliesTable';
 
 const CATEGORY_COLORS = ['#e4e4e7', '#a1a1aa', '#71717a', '#52525b', '#3f3f46', '#27272a'];
 
@@ -75,6 +84,11 @@ export const DashboardPage: React.FC = () => {
   const [forecastError, setForecastError] = useState<string | null>(null);
   const [skippedProducts, setSkippedProducts] = useState<SkippedProductInfo[]>([]);
 
+  // Phase 5 Intelligence States
+  const [evalSummary, setEvalSummary] = useState<ForecastEvaluationSummary | null>(null);
+  const [modelMonitoring, setModelMonitoring] = useState<ModelMonitoring | null>(null);
+  const [anomalies, setAnomalies] = useState<AnomalyItem[]>([]);
+
   // Other loading states
   const [loading, setLoading] = useState<boolean>(true);
   const [seedingSynthetic, setSeedingSynthetic] = useState<boolean>(false);
@@ -95,6 +109,7 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchLatestForecastData();
+    fetchPhase5Intelligence();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -138,6 +153,21 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const fetchPhase5Intelligence = async () => {
+    try {
+      const [evalRes, monRes, anomalyRes] = await Promise.all([
+        forecastEvaluationApi.getSummary(),
+        forecastEvaluationApi.getModelMonitoring(),
+        anomaliesApi.getAnomalies()
+      ]);
+      setEvalSummary(evalRes.data);
+      setModelMonitoring(monRes.data);
+      setAnomalies(anomalyRes.data.anomalies || []);
+    } catch (err) {
+      console.error('Failed to load Phase 5 intelligence:', err);
+    }
+  };
+
   const handleGenerateForecast = async () => {
     setGeneratingForecast(true);
     setForecastStatus('loading');
@@ -153,9 +183,9 @@ export const DashboardPage: React.FC = () => {
       }
 
       await fetchLatestForecastData();
+      await fetchPhase5Intelligence();
       setForecastStatus('success');
 
-      // Reset success status after 6 seconds
       setTimeout(() => {
         setForecastStatus('idle');
       }, 6000);
@@ -179,6 +209,7 @@ export const DashboardPage: React.FC = () => {
       if (res.ok) {
         await fetchDashboardData();
         await fetchLatestForecastData();
+        await fetchPhase5Intelligence();
       }
     } catch (err) {
       console.error(err);
@@ -187,7 +218,6 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  // Compute aggregate 7-day forecast points for the entire store
   const aggregateStoreForecast = useMemo(() => {
     if (!latestForecast || !latestForecast.products || latestForecast.products.length === 0) {
       return [];
@@ -208,14 +238,12 @@ export const DashboardPage: React.FC = () => {
     }));
   }, [latestForecast]);
 
-  // Compute historical daily average from recent trend for comparison
   const historicalDailyAvg = useMemo(() => {
     if (!trend || trend.length === 0) return 0;
     const totalUnits = trend.reduce((acc, t) => acc + t.units_sold, 0);
     return totalUnits / trend.length;
   }, [trend]);
 
-  // Metadata object for metadata panel
   const forecastMeta: ForecastMetadata | null = useMemo(() => {
     if (!latestForecast || latestForecast.total_products === 0) return null;
     return {
@@ -236,10 +264,10 @@ export const DashboardPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Sales & Demand Intelligence
+            Sales & Operational Intelligence
           </h1>
           <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-            Historical sales trajectory, category breakdown, data quality, and 7-day ML demand forecasts
+            Historical analytics, 7-day ML forecasting, forecast evaluation, model drift, and sales anomaly detection
           </p>
         </div>
 
@@ -278,7 +306,6 @@ export const DashboardPage: React.FC = () => {
 
       {/* Executive KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {/* Total Revenue */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Total Revenue</span>
@@ -292,7 +319,6 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">In selected date range</span>
         </div>
 
-        {/* Observed Units Sold */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Observed Units Sold</span>
@@ -306,7 +332,6 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">Historical aggregate</span>
         </div>
 
-        {/* Average Revenue / Recorded Day */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Avg Revenue / Day</span>
@@ -320,7 +345,6 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">Distinct sale dates</span>
         </div>
 
-        {/* Active Catalog Size */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Active Catalog</span>
@@ -334,7 +358,6 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">Active products</span>
         </div>
 
-        {/* Confirmed Stockouts */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Confirmed Stockouts</span>
@@ -348,7 +371,6 @@ export const DashboardPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">is_stockout = TRUE</span>
         </div>
 
-        {/* Zero EOD Stock Days */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Zero EOD Stock Days</span>
@@ -366,21 +388,10 @@ export const DashboardPage: React.FC = () => {
       {/* Data Quality Indicator Card */}
       <DataQualityCard report={dataQuality} />
 
-      {/* ================================================================== */}
-      {/* PHASE 4C — DEMAND FORECAST INTELLIGENCE SECTION */}
-      {/* ================================================================== */}
+      {/* DEMAND FORECAST SECTION */}
       <div className="bg-[#121215] border border-purple-950/80 rounded-2xl p-6 shadow-2xl space-y-6">
-        
-        {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-purple-900/30 pb-5">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-950 text-purple-300 border border-purple-800/80 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-purple-400 animate-pulse" />
-                AI Intelligence Layer
-              </span>
-              <span className="text-xs text-zinc-500">Phase 4 Milestone</span>
-            </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
               DEMAND FORECAST
             </h2>
@@ -388,7 +399,6 @@ export const DashboardPage: React.FC = () => {
               7-day observed-sales forecast generated from leakage-safe temporal features and XGBoost tabular regression
             </p>
 
-            {/* Badges */}
             {latestForecast && (
               <div className="flex flex-wrap items-center gap-3 pt-2 text-xs font-mono">
                 <span className="text-zinc-400">Model: <strong className="text-purple-300">XGBoost</strong></span>
@@ -400,7 +410,6 @@ export const DashboardPage: React.FC = () => {
             )}
           </div>
 
-          {/* Primary Action Button */}
           <div>
             <button
               onClick={handleGenerateForecast}
@@ -422,7 +431,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* State Notification Banners */}
         {forecastStatus === 'success' && (
           <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-3.5 flex items-center gap-3 text-emerald-300 text-xs animate-inventory-pulse">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -445,7 +453,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* Insufficient History Warning Banner */}
         {skippedProducts.length > 0 && (
           <div className="bg-amber-950/30 border border-amber-800/50 rounded-xl p-4 text-xs space-y-2">
             <div className="flex items-center gap-2 text-amber-300 font-semibold">
@@ -465,7 +472,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* 1. FORECAST SUMMARY CARDS */}
         {forecastLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
@@ -479,7 +485,6 @@ export const DashboardPage: React.FC = () => {
           />
         )}
 
-        {/* 2. MAIN FORECAST CHART */}
         {forecastLoading ? (
           <div className="skeleton-acquisition h-80 rounded-xl w-full" />
         ) : (
@@ -491,23 +496,43 @@ export const DashboardPage: React.FC = () => {
           />
         )}
 
-        {/* 3. FORECAST METADATA PANEL */}
         {forecastMeta && <ForecastMetadataPanel metadata={forecastMeta} />}
 
-        {/* 4. PRODUCT FORECAST TABLE */}
         {!forecastLoading && latestForecast && (
           <GroupForecastTable
             groups={latestForecast.products || []}
             onSelectProduct={(pid) => navigate(`/products/${pid}`)}
           />
         )}
+      </div>
+
+      {/* ================================================================== */}
+      {/* PHASE 5 — OPERATIONAL INTELLIGENCE PANELS */}
+      {/* ================================================================== */}
+      <div className="space-y-6">
+        
+        {/* SECTION 1: FORECAST PERFORMANCE */}
+        <ForecastEvaluationCards summary={evalSummary} />
+
+        {/* SECTION 2: MODEL DRIFT & MONITORING */}
+        <ModelMonitoringCard monitoring={modelMonitoring} />
+
+        {/* SECTION 3: SALES & DEMAND ANOMALIES */}
+        <AnomaliesTable
+          anomalies={anomalies}
+          categories={categories}
+          onSelectProduct={(pid) => navigate(`/products/${pid}`)}
+          onFilterChange={(filters) => {
+            anomaliesApi.getAnomalies(filters)
+              .then((res) => setAnomalies(res.data.anomalies || []))
+              .catch(() => {});
+          }}
+        />
 
       </div>
 
       {/* Visualizations Section (Sales Trend & Category Share) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Sales Trend Area Chart (Demand Flow Draw) */}
         <div className="lg:col-span-2 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -556,7 +581,6 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Category Breakdown Donut Chart */}
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-xl backdrop-blur-md flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2 mb-4">

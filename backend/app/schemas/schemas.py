@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 class BusinessCreate(BaseModel):
@@ -264,3 +264,87 @@ class LatestForecastResponse(BaseModel):
     horizon_days: int
     total_products: int
     products: List[LatestForecastProductGroup]
+
+
+# Phase 5 Intelligence Schemas
+class ForecastEvaluationSummary(BaseModel):
+    business_id: int
+    model_name: str = "XGBoost"
+    model_version: str = "xgb-v1"
+    eligible_forecast_count: int
+    evaluated_count: int
+    evaluation_coverage: float # evaluated_count / eligible_forecast_count
+    mae: Optional[float] = None
+    rmse: Optional[float] = None
+    mape: Optional[float] = None # Zero-safe MAPE
+    confirmed_stockout_count: int = 0
+    zero_eod_stock_count: int = 0
+    status: str # EVALUATED, LOW_EVALUATION_COVERAGE, INSUFFICIENT_EVALUATION_DATA
+    message: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    training_cutoff_date: Optional[date] = None
+
+class ForecastEvaluationPoint(BaseModel):
+    evaluation_date: date
+    mae: float
+    rmse: float
+    mape: Optional[float] = None
+    evaluated_count: int
+
+class ProductForecastEvaluationPoint(BaseModel):
+    forecast_date: date
+    predicted_units: float
+    observed_units: float
+    absolute_error: float
+    is_stockout: Optional[bool] = None
+
+class ProductForecastEvaluation(BaseModel):
+    product_id: int
+    sku: str
+    product_name: str
+    category: Optional[str] = None
+    model_name: str = "XGBoost"
+    model_version: str = "xgb-v1"
+    summary: ForecastEvaluationSummary
+    trend: List[ForecastEvaluationPoint] = []
+    points: List[ProductForecastEvaluationPoint] = []
+
+class ModelMonitoring(BaseModel):
+    business_id: int
+    model_name: str = "XGBoost"
+    model_version: str = "xgb-v1"
+    status: str # STABLE, WATCH, DEGRADED, INSUFFICIENT_MONITORING_DATA
+    recent_mae: Optional[float] = None
+    historical_mae: Optional[float] = None
+    degradation_ratio: Optional[float] = None
+    evaluated_days: int = 0
+    explanation: str
+    thresholds: Dict[str, Any] = {}
+
+class AnomalyItem(BaseModel):
+    product_id: int
+    sku: str
+    product_name: str
+    category: Optional[str] = None
+    date: date
+    anomaly_type: str # HIGH_SALES, LOW_SALES, ZERO_SALES, PROMOTION_SPIKE, PRICE_CHANGE
+    severity: str # CRITICAL, WARNING, INFO
+    observed_units: int
+    baseline_units: float
+    deviation: float
+    deviation_score: float
+    is_stockout: bool = False
+    promotion: bool = False
+    holiday: bool = False
+    festival: Optional[str] = None
+    selling_price: float
+    previous_price: Optional[float] = None
+    price_change_percentage: Optional[float] = None
+
+class AnomalyListResponse(BaseModel):
+    business_id: int
+    total_count: int
+    critical_count: int
+    warning_count: int
+    anomalies: List[AnomalyItem] = []

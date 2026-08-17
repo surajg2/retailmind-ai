@@ -12,7 +12,9 @@ import {
   Activity,
   Sparkles,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Target,
+  AlertOctagon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,14 +30,18 @@ import {
   productsApi,
   analyticsApi,
   forecastsApi,
+  forecastEvaluationApi,
+  anomaliesApi,
   ProductItem,
   ProductPerformancePoint,
   ProductForecastResponse,
-  ForecastPoint
+  ProductForecastEvaluation,
+  AnomalyItem
 } from '../services/api';
 import { ForecastChart } from '../components/ForecastChart';
 import { SingleProductForecastTable } from '../components/ForecastTable';
 import { ForecastSummaryCards } from '../components/ForecastSummaryCards';
+import { ForecastEvaluationCards } from '../components/ForecastEvaluationCards';
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +51,8 @@ export const ProductDetailPage: React.FC = () => {
   const [product, setProduct] = useState<ProductItem | null>(null);
   const [performance, setPerformance] = useState<ProductPerformancePoint[]>([]);
   const [productForecast, setProductForecast] = useState<ProductForecastResponse | null>(null);
+  const [productEval, setProductEval] = useState<ProductForecastEvaluation | null>(null);
+  const [productAnomalies, setProductAnomalies] = useState<AnomalyItem[]>([]);
   
   const [range, setRange] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
@@ -56,6 +64,7 @@ export const ProductDetailPage: React.FC = () => {
     if (!productId) return;
     fetchProductDetails();
     fetchProductForecast();
+    fetchProductIntelligence();
   }, [productId, range]);
 
   const fetchProductDetails = async () => {
@@ -81,10 +90,22 @@ export const ProductDetailPage: React.FC = () => {
       const res = await forecastsApi.getProductForecast(productId);
       setProductForecast(res.data);
     } catch (err) {
-      console.log('No existing forecast for product or error:', err);
       setProductForecast(null);
     } finally {
       setForecastLoading(false);
+    }
+  };
+
+  const fetchProductIntelligence = async () => {
+    try {
+      const [evalRes, anomalyRes] = await Promise.all([
+        forecastEvaluationApi.getProductEvaluation(productId),
+        anomaliesApi.getAnomalies({ product_id: productId })
+      ]);
+      setProductEval(evalRes.data);
+      setProductAnomalies(anomalyRes.data.anomalies || []);
+    } catch (err) {
+      console.log('Failed to fetch product evaluation or anomalies:', err);
     }
   };
 
@@ -93,6 +114,7 @@ export const ProductDetailPage: React.FC = () => {
     try {
       await forecastsApi.generateForecasts(productId);
       await fetchProductForecast();
+      await fetchProductIntelligence();
     } catch (err: any) {
       console.error('Failed to generate product forecast:', err);
     } finally {
@@ -100,7 +122,6 @@ export const ProductDetailPage: React.FC = () => {
     }
   };
 
-  // Convert performance points to historical points format for ForecastChart
   const historicalChartPoints = useMemo(() => {
     return performance.map((p) => ({
       sale_date: p.sale_date,
@@ -108,7 +129,6 @@ export const ProductDetailPage: React.FC = () => {
     }));
   }, [performance]);
 
-  // Compute historical daily average for summary cards
   const historicalDailyAvg = useMemo(() => {
     if (!performance || performance.length === 0) return 0;
     const totalUnits = performance.reduce((acc, p) => acc + p.units_sold, 0);
@@ -193,9 +213,7 @@ export const ProductDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ================================================================== */}
       {/* 7-DAY DEMAND FORECAST SECTION */}
-      {/* ================================================================== */}
       <div className="bg-[#121215] border border-purple-950/80 rounded-2xl p-6 shadow-2xl space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-purple-900/30 pb-4">
           <div>
@@ -233,7 +251,6 @@ export const ProductDetailPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Product Forecast Summary Cards */}
         {productForecast && productForecast.forecast.length > 0 && (
           <ForecastSummaryCards
             forecastPoints={productForecast.forecast}
@@ -241,7 +258,6 @@ export const ProductDetailPage: React.FC = () => {
           />
         )}
 
-        {/* Product Forecast Chart */}
         {!forecastLoading && productForecast ? (
           <ForecastChart
             historicalData={historicalChartPoints}
@@ -259,7 +275,6 @@ export const ProductDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* Product Forecast Table */}
         {productForecast && productForecast.forecast.length > 0 && (
           <SingleProductForecastTable
             forecastPoints={productForecast.forecast}
@@ -268,7 +283,67 @@ export const ProductDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Range Preset Selector */}
+      {/* PHASE 5: PRODUCT FORECAST EVALUATION & ANOMALY HISTORY */}
+      <div className="space-y-6">
+        
+        {/* Forecast Evaluation Cards */}
+        {productEval && <ForecastEvaluationCards summary={productEval.summary} />}
+
+        {/* Historical Anomalies for Product */}
+        {productAnomalies.length > 0 && (
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 shadow-xl backdrop-blur-md space-y-4">
+            <div className="flex items-center gap-2 border-b border-zinc-800 pb-3">
+              <AlertOctagon className="w-4 h-4 text-amber-400" />
+              <h3 className="text-sm font-bold text-zinc-200 tracking-wide">Historical Sales Anomalies for {product.name}</h3>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="text-zinc-400 border-b border-zinc-800 bg-zinc-950/80">
+                    <th className="py-2.5 px-3">Date</th>
+                    <th className="py-2.5 px-3">Anomaly Type</th>
+                    <th className="py-2.5 px-3">Severity</th>
+                    <th className="py-2.5 px-3">Observed vs Baseline</th>
+                    <th className="py-2.5 px-3">Context Flags</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/60">
+                  {productAnomalies.map((a, idx) => (
+                    <tr key={idx} className="hover:bg-zinc-800/40">
+                      <td className="py-2.5 px-3 font-semibold text-zinc-300">{a.date}</td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-800 text-zinc-200 border border-zinc-700">
+                          {a.anomaly_type}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          a.severity === 'CRITICAL' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }`}>
+                          {a.severity}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {a.observed_units} pcs <span className="text-zinc-500">vs {a.baseline_units} baseline (Z: {a.deviation_score})</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-[10px]">
+                        {a.is_stockout && <span className="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 mr-1">Stockout</span>}
+                        {a.promotion && <span className="px-1.5 py-0.5 rounded bg-purple-950/60 text-purple-300 mr-1">Promo</span>}
+                        {a.holiday && <span className="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 mr-1">Holiday</span>}
+                        {a.festival && <span className="px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300">{a.festival}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Historical Range Preset Selector */}
       <div className="flex items-center justify-between bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 backdrop-blur-sm">
         <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1">
           <Calendar className="w-3.5 h-3.5 text-zinc-300" /> Historical Performance Timeframe:
@@ -298,7 +373,6 @@ export const ProductDetailPage: React.FC = () => {
           <span className="text-[10px] text-zinc-500 mt-1 block">In selected timeframe</span>
         </div>
 
-        {/* Confirmed Stockouts */}
         <div className="tactile-card bg-zinc-900/80 rounded-2xl p-4 backdrop-blur-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Confirmed Stockout Days</span>

@@ -7,6 +7,8 @@ from backend.app.api.sales import router as sales_router
 from backend.app.api.products import router as products_router
 from backend.app.api.analytics import router as analytics_router
 from backend.app.api.forecasts import router as forecasts_router
+from backend.app.api.forecast_evaluation import router as forecast_evaluation_router
+from backend.app.api.anomalies import router as anomalies_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -42,6 +44,10 @@ app.include_router(analytics_router, prefix=f"{settings.API_V1_STR}/analytics", 
 app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 app.include_router(forecasts_router, prefix=f"{settings.API_V1_STR}/forecasts", tags=["Forecasts"])
 app.include_router(forecasts_router, prefix="/forecasts", tags=["Forecasts"])
+app.include_router(forecast_evaluation_router, prefix=f"{settings.API_V1_STR}/forecast-evaluation", tags=["Forecast Evaluation"])
+app.include_router(forecast_evaluation_router, prefix="/forecast-evaluation", tags=["Forecast Evaluation"])
+app.include_router(anomalies_router, prefix=f"{settings.API_V1_STR}/anomalies", tags=["Anomalies"])
+app.include_router(anomalies_router, prefix="/anomalies", tags=["Anomalies"])
 
 @app.get("/")
 def root():

@@ -118,3 +118,40 @@ When `POST /api/v1/forecasts/generate` is triggered:
 2. `GET /api/v1/forecasts`: Retrieve persisted demand forecasts with optional filters.
 3. `GET /api/v1/forecasts/product/{product_id}`: Retrieve 7-day forecast for a single product (returns 404 for cross-tenant product IDs).
 4. `GET /api/v1/forecasts/latest`: Retrieve deterministic latest forecast batch for the business.
+
+---
+
+## 9. Forecast Evaluation, Model Monitoring & Anomaly Intelligence (Phase 5)
+
+> [!NOTE]
+> **Scope Boundary**: Phase 4D (Inventory Decision Engine) is intentionally deferred. RetailMind AI does not fabricate lead-time demand, safety stock, or automated reorder quantities. Phase 5 focuses strictly on evaluating, monitoring, and analyzing observed sales & forecasts.
+
+### Forecast Evaluation Engine
+- **Target Variable**: Explicitly labeled **"Observed Units Sold"** (never "True Demand" or "Actual Demand").
+- **Evaluated Scope**: Evaluates persisted `Prediction` records against historical `Sales` records where `sale_date == forecast_date`.
+- **Metrics**:
+  - **MAE**: Mean Absolute Error ($\frac{1}{N} \sum |\text{observed} - \text{predicted}|$).
+  - **RMSE**: Root Mean Squared Error ($\sqrt{\frac{1}{N} \sum (\text{observed} - \text{predicted})^2}$).
+  - **Zero-Safe MAPE**: Mean Absolute Percentage Error ($\frac{|\text{observed} - \text{predicted}|}{\text{observed}}$) computed ONLY when $\text{observed} > 0$. Zero observed sales dates are excluded from MAPE to prevent division-by-zero errors.
+  - **Evaluation Coverage**: $\frac{\text{Evaluated Forecast Count}}{\text{Eligible Forecast Count}}$. Returns `INSUFFICIENT_EVALUATION_DATA` when no target dates have passed into historical record.
+  - **Stockout Telemetry**: Reports confirmed stockouts (`is_stockout == True`) and zero EOD stock (`stock_available == 0`) as distinct operational counts.
+
+### Statistical Model Error Drift Monitoring
+- **Methodology**: Compares recent MAE (last 7 evaluated dates) against historical baseline MAE (preceding evaluated dates).
+- **Degradation Ratio**: $\text{Ratio} = \frac{\text{Recent MAE}}{\text{Historical Baseline MAE}}$
+- **Classification Status**:
+  - $\text{Ratio} < 1.15 \rightarrow$ **`STABLE`**
+  - $1.15 \le \text{Ratio} \le 1.35 \rightarrow$ **`WATCH`**
+  - $\text{Ratio} > 1.35 \rightarrow$ **`DEGRADED`**
+- **Edge Cases**: When $\text{Historical MAE} == 0$, $\text{Recent MAE} == 0 \rightarrow \text{STABLE}$ and $\text{Recent MAE} > 0 \rightarrow \text{DEGRADED}$. Returns `INSUFFICIENT_MONITORING_DATA` if evaluated dates count $< 7$.
+
+### Sales Anomaly Detection Engine
+- **Methodology**: Product-specific 21-day rolling median ($\tilde{x}$) and Median Absolute Deviation ($\text{MAD}$) over window $[t-21 \dots t-1]$. Observation $t$ is strictly excluded from its own baseline window (prevents temporal data leakage).
+- **Modified Z-Score**: $Z_t = 0.6745 \times \frac{x_t - \tilde{x}}{\text{MAD} + \epsilon}$
+- **Anomaly Types**:
+  - `HIGH_SALES`: $Z_t > +3.0$
+  - `LOW_SALES`: $Z_t < -3.0$, $x_t > 0$, `is_stockout == False`
+  - `ZERO_SALES`: $x_t == 0$, $Z_t < -3.0$, `is_stockout == False`
+  - `PROMOTION_SPIKE`: `promotion == True`, $Z_t > +2.5$
+  - `PRICE_CHANGE`: Selling price changed $\ge 5\%$ vs previous observed selling price.
+- **Stockout Exclusion**: Days with `is_stockout == True` are explicitly excluded from customer demand drop anomalies and reported separately with stockout context.

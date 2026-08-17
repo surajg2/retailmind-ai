@@ -241,3 +241,118 @@ export const forecastsApi = {
   getLatestForecasts: () =>
     api.get<LatestForecastResponse>('/api/v1/forecasts/latest'),
 };
+
+// Phase 5 Intelligence Interfaces
+export interface ForecastEvaluationSummary {
+  business_id: number;
+  model_name: string;
+  model_version: string;
+  eligible_forecast_count: number;
+  evaluated_count: number;
+  evaluation_coverage: number;
+  mae?: number | null;
+  rmse?: number | null;
+  mape?: number | null;
+  confirmed_stockout_count: number;
+  zero_eod_stock_count: number;
+  status: string;
+  message?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  training_cutoff_date?: string | null;
+}
+
+export interface ForecastEvaluationPoint {
+  evaluation_date: string;
+  mae: number;
+  rmse: number;
+  mape?: number | null;
+  evaluated_count: number;
+}
+
+export interface ProductForecastEvaluationPoint {
+  forecast_date: string;
+  predicted_units: number;
+  observed_units: number;
+  absolute_error: number;
+  is_stockout?: boolean | null;
+}
+
+export interface ProductForecastEvaluation {
+  product_id: number;
+  sku: string;
+  product_name: string;
+  category?: string | null;
+  model_name: string;
+  model_version: string;
+  summary: ForecastEvaluationSummary;
+  trend: ForecastEvaluationPoint[];
+  points: ProductForecastEvaluationPoint[];
+}
+
+export interface ModelMonitoring {
+  business_id: number;
+  model_name: string;
+  model_version: string;
+  status: string; // STABLE, WATCH, DEGRADED, INSUFFICIENT_MONITORING_DATA
+  recent_mae?: number | null;
+  historical_mae?: number | null;
+  degradation_ratio?: number | null;
+  evaluated_days: number;
+  explanation: string;
+  thresholds: Record<string, any>;
+}
+
+export interface AnomalyItem {
+  product_id: number;
+  sku: string;
+  product_name: string;
+  category?: string | null;
+  date: string;
+  anomaly_type: string; // HIGH_SALES, LOW_SALES, ZERO_SALES, PROMOTION_SPIKE, PRICE_CHANGE
+  severity: string; // CRITICAL, WARNING, INFO
+  observed_units: number;
+  baseline_units: number;
+  deviation: number;
+  deviation_score: number;
+  is_stockout: boolean;
+  promotion: boolean;
+  holiday: boolean;
+  festival?: string | null;
+  selling_price: number;
+  previous_price?: number | null;
+  price_change_percentage?: number | null;
+}
+
+export interface AnomalyListResponse {
+  business_id: number;
+  total_count: number;
+  critical_count: number;
+  warning_count: number;
+  anomalies: AnomalyItem[];
+}
+
+export const forecastEvaluationApi = {
+  getSummary: (params?: { product_id?: number; start_date?: string; end_date?: string }) =>
+    api.get<ForecastEvaluationSummary>('/api/v1/forecast-evaluation/summary', { params }),
+
+  getTrend: (params?: { product_id?: number }) =>
+    api.get<ForecastEvaluationPoint[]>('/api/v1/forecast-evaluation/trend', { params }),
+
+  getProductEvaluation: (productId: number) =>
+    api.get<ProductForecastEvaluation>(`/api/v1/forecast-evaluation/product/${productId}`),
+
+  getModelMonitoring: (params?: { product_id?: number }) =>
+    api.get<ModelMonitoring>('/api/v1/forecast-evaluation/models', { params }),
+};
+
+export const anomaliesApi = {
+  getAnomalies: (params?: {
+    start_date?: string;
+    end_date?: string;
+    product_id?: number;
+    category?: string;
+    severity?: string;
+    anomaly_type?: string;
+  }) => api.get<AnomalyListResponse>('/api/v1/anomalies', { params }),
+};
