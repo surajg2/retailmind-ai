@@ -1,19 +1,61 @@
-# RetailMind AI — Demand & Inventory Decision Engine
+# RetailMind AI — Demand & Operational Intelligence Console
 
-> **Predict demand. Prevent stockouts. Reduce dead inventory.**
+> **Predict observed demand. Monitor model drift. Detect sales anomalies.**
 
-RetailMind AI is a production-grade full-stack demand forecasting and inventory decision engine tailored for small retail businesses such as general and kirana stores.
+RetailMind AI is a production-ready, full-stack operational intelligence platform tailored for retail businesses (such as general stores and FMCG merchants).
 
 ---
 
-## Technical Stack (Phase 1 & Phase 2 Implemented)
+## Scope & Architectural Principles
 
-* **Frontend**: React 18, Vite, TypeScript, Tailwind CSS v4, Lucide Icons, Axios, React Router v6
-* **Backend**: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy ORM v2 (`Numeric(10,2)` money types, `Date` daily aggregations)
-* **Database**: PostgreSQL 18
-* **Database Migrations**: Alembic
-* **Authentication**: JWT (JSON Web Tokens), Bcrypt password hashing
-* **Data Engine**: 2-Phase Atomic CSV Validator & Ingestion Engine, Probabilistic Synthetic Sales Generator
+> [!IMPORTANT]
+> **Observed Demand vs. Unobserved Customer Demand**:
+> RetailMind AI forecasts predict **Observed Units Sold** recorded in store sales transactions.
+> Stockout-censored demand has not been reconstructed. Predictions estimate future observed sales patterns.
+> 
+> **Deferred Scope Statement**:
+> **Phase 4D (Inventory Decision Engine) is intentionally deferred.**
+> RetailMind AI currently focuses strictly on demand forecasting, forecast evaluation, model performance monitoring, and historical sales anomaly detection. It does not fabricate automated reorder recommendations, safety stock thresholds, or lead-time demand calculations.
+
+---
+
+## Key Features
+
+1. **Multi-Tenant Foundation & Security** (Phase 1)
+   - PostgreSQL 18 + SQLAlchemy ORM v2
+   - JWT authentication & Bcrypt password hashing
+   - Strict business-level tenant isolation across all endpoints and queries
+
+2. **Atomic Sales CSV Ingestion & Stockout Semantics** (Phase 2)
+   - Two-phase atomic CSV validator with zero-partial-write guarantee
+   - Probabilistic 7,300-record synthetic sales dataset generator
+   - Explicit distinction between confirmed stockouts (`is_stockout == True`) and zero EOD inventory (`stock_available == 0`)
+
+3. **Analytics Dashboard & Dynamic Date Presets** (Phase 3)
+   - Dynamic relative date filtering anchored to `MAX(sale_date)` in the database
+   - Historical sales trend, category revenue share, top products, and data quality indicator
+
+4. **Leakage-Safe XGBoost Demand Forecasting** (Phase 4A / 4B / 4C)
+   - Chronological 70/15/15 train/validation/test split
+   - Shifted rolling features preventing temporal data leakage
+   - Benchmark comparison: Naive, Seasonal Naive, and XGBoost regressor
+   - 7-day prediction persistence in PostgreSQL (`predictions` table)
+   - Option A forecast replacement strategy (duplicate forecast version cleanup)
+   - Recharts visual separation: solid silver historical sales vs purple dashed forecast line
+
+5. **Forecast Evaluation, Model Monitoring & Anomaly Intelligence** (Phase 5)
+   - **Forecast Evaluation**: Matches persisted predictions against historical sales actuals. Calculates MAE, RMSE, and Zero-Safe MAPE.
+   - **Model Error Drift Monitoring**: Statistical comparison of recent 7-day MAE vs historical baseline MAE to classify drift status (`STABLE`, `WATCH`, `DEGRADED`).
+   - **Historical Sales Anomaly Detection**: Deterministic 21-day rolling median & MAD/IQR anomaly detection (`HIGH_SALES`, `LOW_SALES`, `ZERO_SALES`, `PROMOTION_SPIKE`, `PRICE_CHANGE`), treating stockouts separately.
+
+---
+
+## Technical Stack
+
+* **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Recharts, Lucide Icons, Axios, React Router v6
+* **Backend**: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy ORM v2 (`Numeric(10,2)` monetary fields, `Date` aggregations)
+* **Database & Migrations**: PostgreSQL 18, Alembic (`001` through `004`)
+* **Machine Learning**: XGBoost, scikit-learn, joblib, pandas, NumPy
 * **Testing**: Pytest & FastAPI TestClient
 
 ---
@@ -23,47 +65,26 @@ RetailMind AI is a production-grade full-stack demand forecasting and inventory 
 ```
 retailmind-ai/
 ├── backend/                  # FastAPI backend application & DB models
-│   ├── alembic/              # Database migration scripts (001_initial_schema, 002_sales_phase2_schema)
-│   ├── app/                  # Application code (API, Core, DB, Models, Schemas, Services)
-│   ├── tests/                # Automated backend tests (test_auth.py, test_sales.py)
-│   └── requirements.txt      # Python dependencies
-├── frontend/                 # React + TypeScript + Tailwind CSS application
-│   ├── src/                  # App, Components, Context, Pages, Services
+│   ├── alembic/              # Database migration scripts (001_initial_schema to 004_forecast_persistence)
+│   ├── app/                  # Core API routes, DB session, models, schemas, dependencies
+│   ├── tests/                # Automated backend tests (test_auth.py, test_sales.py, test_analytics.py, test_forecasts.py, test_phase5_intelligence.py)
+│   └── requirements.txt      # Backend Python dependencies
+├── ml/                       # Machine Learning forecasting pipeline
+│   ├── artifacts/            # Persisted model binaries & metadata JSON
+│   ├── services/             # Forecast generation, evaluation, drift monitoring, anomaly detection
+│   └── tests/                # ML leakage & baseline test suite
+├── frontend/                 # React + TypeScript + Tailwind CSS web app
+│   ├── src/                  # App components, pages, context, services, types
 │   ├── package.json
 │   └── vite.config.ts
-├── database/                 # Database migration runner
-│   └── init_db.py
-├── data/                     # Data generation & CSV storage
-│   ├── generate_synthetic_data.py
-│   └── synthetic_sales_data.csv  # 7,300 daily records (20 products x 365 days)
-├── ml/                       # Machine Learning forecasting models (Phase 3)
-├── docs/                     # Comprehensive documentation
+├── data/                     # Synthetic data generator & CSV storage
+├── docs/                     # Architecture & API documentation
 │   ├── architecture.md
 │   ├── database.md
-│   └── api.md
-├── .env.example              # Environment variables template
+│   ├── api.md
+│   └── ml_architecture.md
+├── .env.example              # Environment variable template
 └── .gitignore                # Git exclusions (.env, node_modules, build outputs)
-```
-
----
-
-## Sales Data & CSV Ingestion (Phase 2)
-
-### CSV Format Specification
-```csv
-# RETAILMIND AI - SYNTHETIC DATASET
-date,sku,product_name,category,units_sold,selling_price,promotion,holiday,festival,stock_available
-2025-01-01,SKU-GROC-001,Aashirvaad Whole Wheat Atta 5kg,Atta & Flours,39,245.00,0,0,,132
-```
-
-- **Comment Headers**: CSV parser strips `#` comment headers automatically.
-- **Normalization**: `sku` maps to `Product` lookup/creation. `product_name` and `category` are not duplicated in the `sales` table. Empty festival entries normalize to PostgreSQL `NULL`.
-- **Atomic Two-Phase Validation**: If any row contains an error (such as an invalid date, negative quantity, invalid monetary value, intra-file duplicate, database duplicate, or SKU metadata conflict), **zero rows** are inserted.
-
-### Generating Synthetic Data
-To generate the 7,300-record probabilistic synthetic sales dataset:
-```powershell
-python data/generate_synthetic_data.py
 ```
 
 ---
@@ -71,9 +92,10 @@ python data/generate_synthetic_data.py
 ## Local Setup Instructions
 
 ### 1. Environment Configuration
-Ensure `.env` contains your PostgreSQL connection string:
+Copy `.env.example` to `.env` and configure your local PostgreSQL database URL:
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/retailmind_db
+JWT_SECRET_KEY=your_jwt_secret_key_here
 ```
 
 ### 2. Database Migrations
@@ -88,8 +110,31 @@ $env:PYTHONPATH="."
 uvicorn backend.app.main:app --reload --port 8000
 ```
 
-### 4. Running Backend Test Suite
+### 4. Frontend Startup & Production Build
 ```powershell
+# Development server
+cd frontend
+npm run dev
+
+# Production build check
+npm run build
+```
+
+### 5. Running Full Test Suite
+```powershell
+# Backend test suite (35 test cases)
 $env:PYTHONPATH="."
 pytest backend/tests -v
+
+# ML test suite (12 test cases)
+$env:PYTHONPATH="."
+pytest ml/tests -v
 ```
+
+---
+
+## Known Limitations
+
+- **Observed Demand Limit**: Predictions forecast observed units sold. Demand lost to stockouts is not reconstructed.
+- **Minimum Historical Requirement**: Products with fewer than 28 recorded sales dates are skipped during forecast generation.
+- **Phase 4D Deferral**: Automated inventory reorder recommendations are intentionally not included.

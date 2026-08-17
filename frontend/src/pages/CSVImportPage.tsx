@@ -83,7 +83,7 @@ export const CSVImportPage: React.FC = () => {
           Sales CSV Data Ingestion Engine
         </h1>
         <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-          Atomic 2-Phase Validation: Upload daily sales CSVs with zero-partial-write guarantee
+          Atomic Validation: Upload daily sales CSVs with zero-partial-write guarantee
         </p>
       </div>
 

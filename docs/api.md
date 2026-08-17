@@ -122,3 +122,39 @@ Retrieves 7-day demand forecast for a single product.
 ### `GET /api/v1/forecasts/latest`
 Retrieves deterministic latest generated forecast set grouped by product for the business.
 - **Response**: `LatestForecastResponse`.
+
+---
+
+## 7. Forecast Evaluation & Model Monitoring (Phase 5)
+
+All evaluation & monitoring endpoints enforce `current_user.business_id` tenant scoping.
+
+### `GET /api/v1/forecast-evaluation/summary`
+Retrieves aggregate forecast evaluation metrics (MAE, RMSE, Zero-Safe MAPE, evaluation coverage, confirmed stockouts, zero EOD stock count).
+- **Query Parameters**: `product_id`, `start_date`, `end_date`.
+- **Response**: `ForecastEvaluationSummary`. Returns `INSUFFICIENT_EVALUATION_DATA` when no prediction target dates have passed into historical actuals.
+
+### `GET /api/v1/forecast-evaluation/trend`
+Retrieves historical evaluation performance time-series over time.
+- **Response**: List of `ForecastEvaluationPoint`.
+
+### `GET /api/v1/forecast-evaluation/product/{product_id}`
+Retrieves 7-day forecast evaluation and accuracy metrics for a specific product.
+- **Response**: `ProductForecastEvaluation`. Returns `404 Not Found` for cross-tenant product requests.
+
+### `GET /api/v1/forecast-evaluation/models`
+Retrieves model error drift monitoring telemetry.
+- **Behavior**: Compares recent 7-day MAE against historical baseline MAE to classify status (`STABLE`, `WATCH`, `DEGRADED`, `INSUFFICIENT_MONITORING_DATA`).
+- **Response**: `ModelMonitoring`.
+
+---
+
+## 8. Historical Sales Anomaly Detection (Phase 5)
+
+### `GET /api/v1/anomalies`
+Retrieves historical sales anomalies detected dynamically via 21-day rolling median & MAD/IQR.
+- **Query Parameters**: `start_date`, `end_date`, `product_id`, `category`, `severity` (`CRITICAL`, `WARNING`, `INFO`), `anomaly_type` (`HIGH_SALES`, `LOW_SALES`, `ZERO_SALES`, `PROMOTION_SPIKE`, `PRICE_CHANGE`).
+- **Behavior**:
+  - Excludes target day $t$ from its own baseline window $[t-21 \dots t-1]$ (leakage-safe).
+  - Excludes confirmed stockouts (`is_stockout == True`) from customer demand drops.
+- **Response**: `AnomalyListResponse`.
