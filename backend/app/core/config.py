@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     
     # Application
     ENVIRONMENT: str = "development"
-    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:4173", "http://localhost:3000"]
     
     @field_validator("CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:

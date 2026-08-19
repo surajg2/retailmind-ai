@@ -20,18 +20,43 @@ app = FastAPI(
 # Set CORS middleware
 origins = settings.CORS_ORIGINS
 if isinstance(origins, str):
-    origins = [origins]
+    if origins.strip() == "*":
+        origins = ["*"]
+    else:
+        origins = [o.strip() for o in origins.split(",") if o.strip()]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:4173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:4173",
+    "http://localhost:3000",
+    "http://localhost:4174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:4173",
+    "http://127.0.0.1:3000",
+]
+
+if isinstance(origins, list):
+    for o in default_origins:
+        if o not in origins and "*" not in origins:
+            origins.append(o)
+
+if "*" in origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_origin_regex=r"https?://.*",
+    )
 
 # Root level health endpoint
 app.include_router(health_router, tags=["Health"])
