@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     CORS_ORIGINS: Union[str, List[str]] = ["http://localhost:5173", "http://localhost:4173", "http://localhost:3000"]
     
+    @field_validator("DATABASE_URL", mode="before")
+    def assemble_db_connection(cls, v: str) -> str:
+        if isinstance(v, str) and v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql://", 1)
+        return v
+
     @field_validator("CORS_ORIGINS", mode="before")
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):

@@ -11,10 +11,24 @@ from backend.app.api.forecasts import router as forecasts_router
 from backend.app.api.forecast_evaluation import router as forecast_evaluation_router
 from backend.app.api.anomalies import router as anomalies_router
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from backend.app.models.models import Base
+        from backend.app.db.session import engine
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        import logging
+        logging.warning(f"Startup table check: {e}")
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan
 )
 
 # Set CORS middleware
@@ -61,15 +75,16 @@ else:
 # Root level health endpoint
 app.include_router(health_router, tags=["Health"])
 
-# @app.exception_handler(Exception)
-# async def global_exception_handler(request, exc: Exception):
-#     # Log internal error on server side without leaking details to client
-#     import logging
-#     logging.error(f"Internal Server Error on {request.url}: {exc}")
-#     return JSONResponse(
-#         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#         content={"detail": "An internal server error occurred. Please try again later."}
-#     )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import logging
+    logging.error(f"Internal Server Error on {request.url}: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "An internal server error occurred. Please check database logs or try again."}
+    )
 
 # API v1 endpoints
 app.include_router(health_router, prefix=settings.API_V1_STR, tags=["Health"])
